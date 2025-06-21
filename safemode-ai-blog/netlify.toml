@@ -1,9 +1,17 @@
-[build]
-  # This command tells Netlify to go into your project folder and then run the build
-  command = "cd safemode-ai-blog && pnpm build"
+# The final and correct Netlify configuration
 
-  # This tells Netlify where to find the finished site relative to your repository root
-  publish = "safemode-ai-blog/out"
+[build]
+  # This tells Netlify to look inside your "safemode-ai-blog" folder first.
+  base = "safemode-ai-blog"
+
+  # This is the command to build your site.
+  # "pnpm" is used because of your pnpm-lock.yaml file.
+  command = "pnpm build"
+
+  # After the build, Netlify will publish the "out" folder.
+  # This is created because of the "output: 'export'" in your next.config.mjs.
+  publish = "out"
 
 [build.environment]
+  # We use a modern version of Node.js for compatibility.
   NODE_VERSION = "20"
