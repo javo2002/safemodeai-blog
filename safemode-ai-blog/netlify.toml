@@ -1,17 +1,17 @@
-# The final and correct Netlify configuration
+# The official Netlify configuration for a standard Next.js application.
+# This handles dynamic pages, static pages, and everything else correctly.
 
 [build]
-  # This tells Netlify to look inside your "safemode-ai-blog" folder first.
+  # This tells Netlify where your Next.js project is located.
   base = "safemode-ai-blog"
 
-  # This is the command to build your site.
-  # "pnpm" is used because of your pnpm-lock.yaml file.
+  # This is the standard command to build the site.
   command = "pnpm build"
 
-  # After the build, Netlify will publish the "out" folder.
-  # This is created because of the "output: 'export'" in your next.config.mjs.
-  publish = "out"
+  # For a standard Next.js build, the output directory is always ".next".
+  publish = ".next"
 
-[build.environment]
-  # We use a modern version of Node.js for compatibility.
-  NODE_VERSION = "20"
+# This official Netlify plugin is the key to making everything work.
+# It intelligently handles your Next.js site's output.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
