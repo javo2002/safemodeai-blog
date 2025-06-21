@@ -1,18 +1,9 @@
-# Netlify configuration file for a Next.js project using pnpm
-
 [build]
-  # Directory to change to before starting a build.
-  # This is the folder that contains your package.json.
-  base = "safemode-ai-blog"
+  # This command tells Netlify to go into your project folder and then run the build
+  command = "cd safemode-ai-blog && pnpm build"
 
-  # The command to build your site.
-  # We specify 'pnpm build' because the project uses pnpm.
-  command = "pnpm build"
-
-  # The directory that contains the deploy-ready HTML files and assets.
-  # For Next.js, this is the .next folder.
-  publish = ".next"
+  # This tells Netlify where to find the finished site relative to your repository root
+  publish = "safemode-ai-blog/out"
 
 [build.environment]
-  # Specify a modern Node.js version to ensure compatibility.
   NODE_VERSION = "20"
