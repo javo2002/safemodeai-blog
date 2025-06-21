@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-inter), sans-serif;
+  }
+  /* Basic prose styling for post content */
+  .prose {
+    @apply text-foreground;
+  }
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose h5,
+  .prose h6 {
+    @apply text-[var(--tw-prose-headings)] font-mono;
+  }
+  .prose a {
+    @apply text-[var(--tw-prose-links)] hover:underline decoration-1 underline-offset-2 hover:decoration-[#4DD4D4];
+  }
+  .prose blockquote {
+    @apply border-l-4 border-[var(--tw-prose-quote-borders)] pl-4 italic text-[var(--tw-prose-quotes)];
+  }
+  .prose ul > li::before {
+    @apply bg-[var(--tw-prose-bullets)];
+  }
+  .prose ol > li::before {
+    @apply text-[var(--tw-prose-bullets)];
+  }
+  .prose code {
+    @apply bg-[#0A0A0A] text-[#61E8E1] px-1.5 py-0.5 rounded-sm font-mono text-sm border border-[#333];
+  }
+  .prose pre {
+    @apply bg-[#0A0A0A] p-4 rounded-md overflow-x-auto border border-[#333];
+  }
+  .prose pre code {
+    @apply bg-transparent p-0 border-none;
+  }
+  .prose hr {
+    @apply border-[var(--tw-prose-hr)];
+  }
+  .prose strong {
+    @apply text-[#EAEAEA];
+  }
+  .prose img {
+    @apply rounded-md glow-border; /* Add glow to images within prose */
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .glow-border {
+    box-shadow: 0 0 8px rgba(97, 232, 225, 0.25);
+    border: 1px solid rgba(97, 232, 225, 0.4);
+  }
+
+  .glow-border-intense {
+    box-shadow: 0 0 15px rgba(97, 232, 225, 0.5);
+    border: 1px solid rgba(97, 232, 225, 0.7);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 8px rgba(97, 232, 225, 0.4);
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .font-mono {
+    font-family: var(--font-orbitron), monospace;
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d0d0d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #61e8e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4dd4d4;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #61e8e1;
+  outline-offset: 2px;
+}
