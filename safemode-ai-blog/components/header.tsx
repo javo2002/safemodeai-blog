@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Menu, X, Youtube, ChevronDown, Plus, Trash2, LogOut, User, Settings } from "lucide-react"
+import { Menu, X, Youtube, ChevronDown, Plus, Trash2, LogOut, User, Settings, LayoutDashboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -32,6 +32,7 @@ export function Header({ user }: { user: UserType | null }) {
   const deleteAllPosts = () => {
     // Ideally, this should also be a server action for security
     if (confirm("Are you sure you want to delete all posts? This action cannot be undone.")) {
+      // This is still using localStorage and should be migrated to a proper backend call
       localStorage.removeItem("safemode-posts")
       alert("All posts have been deleted.")
       router.refresh()
@@ -68,37 +69,6 @@ export function Header({ user }: { user: UserType | null }) {
 
             {user ? (
               <div className="flex items-center space-x-4">
-                {user.role === "admin" && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="text-[#61E8E1] hover:text-[#4DD4D4] font-semibold">
-                        Admin
-                        <ChevronDown className="w-4 h-4 ml-1" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-[#1A1A1A] border-[#333]" align="end">
-                      <DropdownMenuItem asChild>
-                        <Link
-                          href="/admin"
-                          className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1]"
-                        >
-                          <User className="w-4 h-4 mr-2" />
-                          Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                      {/* ... other admin links */}
-                      <DropdownMenuSeparator className="bg-[#333]" />
-                      <DropdownMenuItem
-                        onClick={deleteAllPosts}
-                        className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete All Posts
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="text-[#EAEAEA] hover:text-[#61E8E1]">
@@ -108,6 +78,40 @@ export function Header({ user }: { user: UserType | null }) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="bg-[#1A1A1A] border-[#333]" align="end">
+                    {/* Admin-specific links are now here */}
+                    {user.role === 'admin' && (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1]">
+                            <LayoutDashboard className="w-4 h-4 mr-2" />
+                            Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin/create" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1]">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Post
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin/profile" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1]">
+                            <Settings className="w-4 h-4 mr-2" />
+                            Profile Settings
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-[#333]" />
+                        <DropdownMenuItem
+                          onClick={deleteAllPosts}
+                          className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete All Posts
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-[#333]" />
+                      </>
+                    )}
+
+                    {/* Standard user links */}
                     <DropdownMenuItem
                       onClick={handleSignOut}
                       className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer"
@@ -122,7 +126,7 @@ export function Header({ user }: { user: UserType | null }) {
               <></> // If no user, show nothing or a sign-in button
             )}
           </nav>
-          {/* ... mobile menu logic ... */}
+          {/* ... mobile menu logic remains the same */}
         </div>
       </div>
     </header>
