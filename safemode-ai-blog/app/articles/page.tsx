@@ -3,20 +3,17 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Header } from "@/components/header"
-import { ArrowRight, CalendarDays, LayoutGrid } from "lucide-react"
+import { LayoutGrid, CalendarDays, ArrowRight } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 interface Post {
   id: string
   title: string
   content: string
   category: string
-  featured: boolean
   image: string
   createdAt: string
-  published: boolean
-  sources?: string[] // Added sources
 }
 
 interface GroupedPosts {
@@ -24,118 +21,44 @@ interface GroupedPosts {
 }
 
 const PLACEHOLDER_SNIPPET = "Coming soon..."
-const examplePostContentForArticles = `The landscape of cybersecurity is undergoing a seismic shift, largely driven by the rapid advancements in Artificial Intelligence...`
 
 export default function AllArticlesPage() {
   const [groupedPosts, setGroupedPosts] = useState<GroupedPosts>({})
   const [isLoading, setIsLoading] = useState(true)
   const [categories, setCategories] = useState<string[]>([])
   const [openCategories, setOpenCategories] = useState<string[]>([])
+  const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
-    const savedPosts = localStorage.getItem("safemode-posts")
-    let allPosts: Post[] = []
+    const fetchPosts = async () => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('id, title, content, category, image, createdAt')
+        .eq('published', true)
+        .order('created_at', { ascending: false });
 
-    if (savedPosts) {
-      allPosts = JSON.parse(savedPosts)
-    } else {
-      allPosts = [
-        {
-          id: "1",
-          title: "The Rise of AI-Powered Cyber Threats",
-          content: examplePostContentForArticles, // Example content
-          category: "CYBERSECURITY",
-          featured: true,
-          image: "/placeholder.svg?height=200&width=350",
-          createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-          published: true,
-          sources: ["https://www.csoonline.com/article/573097/how-ai-is-transforming-cybersecurity.html"],
-        },
-        {
-          id: "2",
-          title: "Ethical AI: Navigating the Moral Landscape",
-          content: "",
-          category: "AI ETHICS",
-          featured: true,
-          image: "/placeholder.svg?height=200&width=350",
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          published: true,
-        },
-        // ... other posts remain with empty content for placeholder
-        {
-          id: "3",
-          title: "Machine Learning in Threat Detection",
-          content: "",
-          category: "THREAT ANALYSIS",
-          featured: true,
-          image: "/placeholder.svg?height=200&width=350",
-          createdAt: new Date().toISOString(),
-          published: true,
-        },
-        {
-          id: "4",
-          title: "The Future of Digital Privacy in the AI Era",
-          content: "",
-          category: "PRIVACY",
-          featured: true,
-          image: "/placeholder.svg?height=200&width=350",
-          createdAt: new Date(Date.now() + 86400000).toISOString(),
-          published: true,
-        },
-        {
-          id: "5",
-          title: "Advanced Persistent Threats (APTs) and AI",
-          content: "",
-          category: "CYBERSECURITY",
-          featured: false,
-          image: "/placeholder.svg?height=200&width=350",
-          createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-          published: true,
-        },
-        {
-          id: "6",
-          title: "Bias Mitigation in AI Models",
-          content: "",
-          category: "AI ETHICS",
-          featured: false,
-          image: "/placeholder.svg?height=200&width=350",
-          createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
-          published: true,
-        },
-        {
-          id: "7",
-          title: "Unpublished Draft Post Example",
-          content: "This post should not appear on the All Articles page.",
-          category: "DRAFTS",
-          featured: false,
-          image: "/placeholder.svg?height=200&width=350",
-          createdAt: new Date().toISOString(),
-          published: false,
-        },
-      ]
-      if (!savedPosts) {
-        localStorage.setItem("safemode-posts", JSON.stringify(allPosts))
+      if (error) {
+        console.error("Error fetching posts:", error);
+        setIsLoading(false);
+        return;
       }
+
+      const groups: GroupedPosts = data.reduce((acc, post) => {
+        const category = post.category || "Uncategorized"
+        if (!acc[category]) acc[category] = []
+        acc[category].push(post)
+        return acc
+      }, {} as GroupedPosts)
+
+      const sortedCategories = Object.keys(groups).sort()
+      setGroupedPosts(groups)
+      setCategories(sortedCategories)
+      if (sortedCategories.length > 0) setOpenCategories([sortedCategories[0]])
+      setIsLoading(false)
     }
 
-    const publishedPosts = allPosts.filter((post) => post.published)
-    const groups: GroupedPosts = publishedPosts.reduce((acc, post) => {
-      const category = post.category || "Uncategorized"
-      if (!acc[category]) acc[category] = []
-      acc[category].push(post)
-      return acc
-    }, {} as GroupedPosts)
-
-    for (const category in groups) {
-      groups[category].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    }
-
-    const sortedCategories = Object.keys(groups).sort()
-    setGroupedPosts(groups)
-    setCategories(sortedCategories)
-    if (sortedCategories.length > 0) setOpenCategories([sortedCategories[0]])
-    setIsLoading(false)
-  }, [])
+    fetchPosts()
+  }, [supabase])
 
   if (isLoading) {
     return (
@@ -151,7 +74,6 @@ export default function AllArticlesPage() {
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-      <Header />
       <main className="container mx-auto px-4 py-8 md:py-12">
         <header className="mb-10 md:mb-12 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-[#61E8E1] font-mono glow-text">All Articles</h1>
@@ -165,7 +87,7 @@ export default function AllArticlesPage() {
             <LayoutGrid className="w-16 h-16 text-[#61E8E1]/50 mx-auto mb-6" />
             <h2 className="text-2xl font-semibold text-[#EAEAEA] mb-2">No Articles Found</h2>
             <p className="text-[#AAAAAA]">
-              There are currently no published articles. Please check back later or create some in the admin panel.
+              There are currently no published articles. Please check back later.
             </p>
           </div>
         ) : (
