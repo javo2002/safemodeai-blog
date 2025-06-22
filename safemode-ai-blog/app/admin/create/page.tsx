@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Lock } from "lucide-react"
 import Link from "next/link"
-import { createSupabaseBrowserClient } from "@/lib/supabase" // Import Supabase client
+import { createSupabaseBrowserClient } from "@/lib/supabase/client" // CORRECTED IMPORT
 import { useToast } from "@/hooks/use-toast"
 
 interface User {
