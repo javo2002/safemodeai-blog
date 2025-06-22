@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,7 +32,6 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-      <Header />
       <main className="container mx-auto px-4 py-16">
         <div className="max-w-md mx-auto">
           <Card className="bg-[#1A1A1A] border-[#333] glow-border">
