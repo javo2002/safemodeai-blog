@@ -1,9 +1,11 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter, Orbitron } from "next/font/google" // Combined imports
+import { Inter, Orbitron } from "next/font/google"
 import "./globals.css"
-import { Footer } from "@/components/footer" // Import Footer
-import { Toaster } from "@/components/ui/toaster" // Import Toaster for notifications
+import { Footer } from "@/components/footer"
+import { Toaster } from "@/components/ui/toaster"
+import { getSession } from "./actions" // Import getSession
+import { Header } from "@/components/header" // Import Header
 
 const inter = Inter({
   subsets: ["latin"],
@@ -11,7 +13,6 @@ const inter = Inter({
 })
 
 const orbitronFont = Orbitron({
-  // Renamed to avoid conflict if 'Orbitron' is used as a component name elsewhere
   subsets: ["latin"],
   variable: "--font-orbitron",
   weight: ["400", "700", "900"],
@@ -24,20 +25,23 @@ export const metadata: Metadata = {
     generator: 'v0.dev'
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await getSession();
+  const user = session?.user || null;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${orbitronFont.variable} antialiased bg-[#0D0D0D]`}>
         <div className="flex flex-col min-h-screen">
-          {/* Header is rendered by individual page.tsx files */}
+          <Header user={user} /> {/* Pass user data as a prop */}
           <main className="flex-grow">{children}</main>
-          <Footer /> {/* Add Footer here */}
+          <Footer />
         </div>
-        <Toaster /> {/* Add Toaster here for notifications */}
+        <Toaster />
       </body>
     </html>
   )
