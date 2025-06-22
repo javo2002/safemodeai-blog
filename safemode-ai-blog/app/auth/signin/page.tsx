@@ -11,47 +11,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, User } from "lucide-react"
+import { login } from "@/lib/auth"
 // Removed Info icon and Accordion components as they are no longer needed
 
 export default function SignInPage() {
   const router = useRouter()
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
 
-    // Simulate authentication delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const formData = new FormData(e.currentTarget)
+    const response = await login(formData)
 
-    // Check credentials
-    // These are the credentials the admin needs to remember
-    if (formData.username === "admin" && formData.password === "safemode2024") {
-      const userData = {
-        username: "admin",
-        role: "admin",
-        signedInAt: new Date().toISOString(),
-      }
-      localStorage.setItem("safemode-user", JSON.stringify(userData))
-      router.push("/")
-    } else if (formData.username === "user" && formData.password === "password") {
-      // Regular user login (if you still want this for testing)
-      const userData = {
-        username: "user",
-        role: "user",
-        signedInAt: new Date().toISOString(),
-      }
-      localStorage.setItem("safemode-user", JSON.stringify(userData))
+    if (response.success) {
       router.push("/")
     } else {
-      setError("Invalid username or password")
+      setError(response.error || "An unexpected error occurred.")
     }
 
     setIsLoading(false)
@@ -77,9 +57,8 @@ export default function SignInPage() {
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#61E8E1] w-4 h-4" />
                     <Input
                       id="username"
+                      name="username"
                       type="text"
-                      value={formData.username}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, username: e.target.value }))}
                       placeholder="Enter your username"
                       className="bg-[#0D0D0D] border-[#333] text-[#EAEAEA] focus:border-[#61E8E1] pl-10"
                       required
@@ -95,9 +74,8 @@ export default function SignInPage() {
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#61E8E1] w-4 h-4" />
                     <Input
                       id="password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
-                      value={formData.password}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                       placeholder="Enter your password"
                       className="bg-[#0D0D0D] border-[#333] text-[#EAEAEA] focus:border-[#61E8E1] pl-10 pr-10"
                       required
