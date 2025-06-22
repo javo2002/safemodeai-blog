@@ -43,7 +43,6 @@ export default function EditPost({ params }: { params: { id: string } }) {
       if (session?.user && session.user.role === 'admin') {
         setUser(session.user);
 
-        // Fetch the post from Supabase
         const { data: postData, error } = await supabase
           .from('posts')
           .select('*')
@@ -66,6 +65,8 @@ export default function EditPost({ params }: { params: { id: string } }) {
 
   const handleSave = async (postData: Omit<Post, "id" | "createdAt">) => {
     setIsSaving(true)
+    
+    // REMOVED the manual updated_at from the update object
     const { error } = await supabase
       .from('posts')
       .update({
@@ -76,7 +77,6 @@ export default function EditPost({ params }: { params: { id: string } }) {
         image: postData.image,
         published: postData.published,
         sources: postData.sources,
-        updated_at: new Date().toISOString(), // Manually set updated_at
       })
       .eq('id', params.id);
     
