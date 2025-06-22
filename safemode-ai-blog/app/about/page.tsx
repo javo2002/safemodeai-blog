@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react" // Added useState, useEffect
-import { Header } from "@/components/header"
 import { motion } from "framer-motion"
 import { BrainCircuit, ShieldCheck, Eye, BarChartBig, Rss, Youtube, Mail, UserCircle } from "lucide-react" // Added UserCircle
 import Link from "next/link"
@@ -68,7 +67,6 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA] overflow-x-hidden">
-      <Header />
 
       <div className="fixed inset-0 z-[-1] opacity-10">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
