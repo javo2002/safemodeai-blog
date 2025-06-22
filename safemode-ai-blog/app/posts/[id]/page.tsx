@@ -4,82 +4,49 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Header } from "@/components/header"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Clock, LinkIcon } from "lucide-react" // Added LinkIcon
+import { ArrowLeft, Clock, Link as LinkIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 interface Post {
   id: string
   title: string
   content: string
   category: string
-  featured: boolean
   image: string
   createdAt: string
-  published: boolean
-  sources?: string[] // Added sources
+  sources?: string[]
 }
 
 const PLACEHOLDER_CONTENT = "Coming soon..."
-
-const examplePostContent = `The landscape of cybersecurity is undergoing a seismic shift, largely driven by the rapid advancements in Artificial Intelligence. While AI offers powerful tools for defense, it simultaneously equips adversaries with sophisticated capabilities, creating a complex, ever-evolving battlefield.
-
-AI-powered attacks are becoming increasingly common and harder to detect. For instance, generative AI can create highly convincing phishing emails or deepfake videos for social engineering campaigns that bypass traditional human scrutiny. Machine learning algorithms can be trained to identify vulnerabilities in systems at an unprecedented scale and speed, or to adapt malware to evade existing security measures.
-
-On the defensive side, AI is crucial for analyzing vast amounts of threat data to identify patterns and anomalies that might indicate an attack. AI-driven Security Orchestration, Automation and Response (SOAR) platforms can automate routine security tasks, allowing human analysts to focus on more complex threats.
-
-The challenge lies in the "cat and mouse" game: as defensive AI gets smarter, so does offensive AI. This necessitates continuous innovation, robust ethical guidelines for AI development in security, and a proactive approach to threat hunting and intelligence sharing.`
 
 export default function PostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const [post, setPost] = useState<Post | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
-    if (params.id) {
-      const savedPosts = localStorage.getItem("safemode-posts")
-      let allPosts: Post[] = []
-
-      if (savedPosts) {
-        allPosts = JSON.parse(savedPosts)
-      } else {
-        // Fallback to demo data if no posts in localStorage
-        allPosts = [
-          {
-            id: "1",
-            title: "The Rise of AI-Powered Cyber Threats",
-            content: examplePostContent, // Example content
-            category: "CYBERSECURITY",
-            featured: true,
-            image: "/placeholder.svg?height=450&width=800",
-            createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-            published: true,
-            sources: [
-              "https://www.csoonline.com/article/573097/how-ai-is-transforming-cybersecurity.html",
-              "Doe, J. (2023). AI in Cyber Attacks. Tech Journal, 45(2), 123-145.",
-              "https://www.nist.gov/artificial-intelligence",
-            ],
-          },
-          {
-            id: "2",
-            title: "Ethical AI: Navigating the Moral Landscape",
-            content: "", // Empty content will show placeholder
-            category: "AI ETHICS",
-            featured: true,
-            image: "/placeholder.svg?height=450&width=800",
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            published: true,
-            sources: [],
-          },
-        ]
+    const fetchPost = async () => {
+      if (params.id) {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('id', params.id)
+          .single();
+        
+        if (error) {
+          console.error("Error fetching post:", error);
+          setPost(null);
+        } else {
+          setPost(data);
+        }
       }
-
-      const foundPost = allPosts.find((p) => p.id === params.id)
-      setPost(foundPost || null)
+      setIsLoading(false)
     }
-    setIsLoading(false)
-  }, [params.id])
+    fetchPost()
+  }, [params.id, supabase])
 
   const isURL = (str: string) => {
     try {
@@ -103,7 +70,6 @@ export default function PostPage({ params }: { params: { id: string } }) {
   if (!post) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-        <Header />
         <main className="container mx-auto px-4 py-16 text-center">
           <h1 className="text-3xl font-bold text-[#61E8E1] font-mono mb-4">Post Not Found</h1>
           <p className="text-[#AAAAAA] mb-8">The post you are looking for does not exist or could not be loaded.</p>
@@ -120,7 +86,6 @@ export default function PostPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-      <Header />
       <main className="container mx-auto px-4 py-8 md:py-12">
         <div className="max-w-3xl mx-auto">
           <Button
