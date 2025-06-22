@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Header } from "@/components/header"
 import { PostEditor } from "@/components/post-editor"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Lock } from "lucide-react"
 import Link from "next/link"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
+import { getSession } from "@/app/actions"
 
 interface Post {
   id: string
@@ -18,58 +20,84 @@ interface Post {
   image: string
   createdAt: string
   published: boolean
-  sources?: string[] // Added sources
+  sources?: string[]
 }
 
 interface User {
   username: string
   role: "admin" | "user"
-  signedInAt: string
 }
 
 export default function EditPost({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const { toast } = useToast()
   const [post, setPost] = useState<Post | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("safemode-user")
-    if (savedUser) {
-      const userData = JSON.parse(savedUser)
-      setUser(userData)
+    const checkUserAndFetchPost = async () => {
+      const session = await getSession();
+      if (session?.user && session.user.role === 'admin') {
+        setUser(session.user);
 
-      if (userData.role !== "admin") {
-        router.push("/")
-        return
+        // Fetch the post from Supabase
+        const { data: postData, error } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('id', params.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching post:', error);
+          setPost(null);
+        } else {
+          setPost(postData);
+        }
+      } else {
+        router.push("/auth/signin");
       }
+      setIsLoading(false);
+    };
+    checkUserAndFetchPost();
+  }, [params.id, router, supabase])
+
+  const handleSave = async (postData: Omit<Post, "id" | "createdAt">) => {
+    setIsSaving(true)
+    const { error } = await supabase
+      .from('posts')
+      .update({
+        title: postData.title,
+        content: postData.content,
+        category: postData.category,
+        featured: postData.featured,
+        image: postData.image,
+        published: postData.published,
+        sources: postData.sources,
+        updated_at: new Date().toISOString(), // Manually set updated_at
+      })
+      .eq('id', params.id);
+    
+    setIsSaving(false)
+
+    if (error) {
+      toast({
+        title: "Error Updating Post",
+        description: error.message,
+        variant: "destructive",
+      });
     } else {
-      router.push("/auth/signin")
-      return
+      toast({
+        title: "Post Updated!",
+        description: "Your changes have been saved successfully.",
+        className: "bg-[#1A1A1A] text-[#61E8E1] border-[#61E8E1]",
+      });
+      router.push("/admin");
+      router.refresh();
     }
-
-    const savedPosts = localStorage.getItem("safemode-posts")
-    if (savedPosts) {
-      const posts: Post[] = JSON.parse(savedPosts)
-      const foundPost = posts.find((p: Post) => p.id === params.id)
-      setPost(foundPost || null)
-    }
-
-    setIsLoading(false)
-  }, [params.id, router])
-
-  const handleSave = (postData: Omit<Post, "id" | "createdAt">) => {
-    // Adjusted type
-    const savedPosts = localStorage.getItem("safemode-posts")
-    const posts: Post[] = savedPosts ? JSON.parse(savedPosts) : []
-
-    const updatedPosts = posts.map((p: Post) =>
-      p.id === params.id ? { ...p, ...postData, id: params.id, createdAt: p.createdAt } : p,
-    )
-
-    localStorage.setItem("safemode-posts", JSON.stringify(updatedPosts))
-    router.push("/admin")
-  }
+  };
 
   if (isLoading) {
     return (
@@ -81,10 +109,9 @@ export default function EditPost({ params }: { params: { id: string } }) {
     )
   }
 
-  if (!user || user.role !== "admin") {
+  if (!user) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-        <Header />
         <main className="container mx-auto px-4 py-16">
           <Card className="bg-[#1A1A1A] border-[#333] glow-border max-w-md mx-auto">
             <CardContent className="p-8 text-center">
@@ -104,7 +131,6 @@ export default function EditPost({ params }: { params: { id: string } }) {
   if (!post) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-        <Header />
         <main className="container mx-auto px-4 py-16">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-[#61E8E1] mb-4">Post Not Found</h1>
@@ -120,10 +146,9 @@ export default function EditPost({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-[#61E8E1] font-mono mb-8">Edit Post</h1>
-        <PostEditor initialData={post} onSave={handleSave} />
+        <PostEditor initialData={post} onSave={handleSave} isSaving={isSaving} />
       </main>
     </div>
   )
