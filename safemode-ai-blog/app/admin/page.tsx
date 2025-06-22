@@ -2,29 +2,27 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Edit, Trash2, Lock, Users, Newspaper } from "lucide-react"
 import Link from "next/link"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { getSession } from "@/app/actions"
+import { useToast } from "@/hooks/use-toast"
 
 interface Post {
-  id: string
-  title: string
-  content: string
-  category: string
-  featured: boolean
-  image: string
-  createdAt: string
-  published: boolean
-  sources?: string[] // Added sources
+  id: string;
+  title: string;
+  category: string;
+  featured: boolean;
+  createdAt: string;
+  published: boolean;
 }
 
 interface User {
   username: string
   role: "admin" | "user"
-  signedInAt: string
 }
 
 export default function AdminDashboard() {
@@ -33,37 +31,58 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [subscriberCount, setSubscriberCount] = useState(0)
   const router = useRouter()
+  const supabase = createSupabaseBrowserClient()
+  const { toast } = useToast()
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("safemode-user")
-    if (savedUser) {
-      const userData = JSON.parse(savedUser)
-      setUser(userData)
-      if (userData.role !== "admin") {
-        router.push("/")
-        return
+    const checkUserAndFetchData = async () => {
+      const session = await getSession();
+      if (session?.user && session.user.role === 'admin') {
+        setUser(session.user);
+
+        // Fetch posts
+        const { data: postsData, error: postsError } = await supabase
+          .from('posts')
+          .select('id, title, category, featured, createdAt, published')
+          .order('created_at', { ascending: false });
+
+        if (postsError) console.error('Error fetching posts:', postsError);
+        else setPosts(postsData || []);
+
+        // Fetch subscribers count
+        const { count, error: countError } = await supabase
+          .from('subscribers')
+          .select('*', { count: 'exact', head: true });
+
+        if (countError) console.error('Error fetching subscriber count:', countError);
+        else setSubscriberCount(count || 0);
+
+      } else {
+        router.push("/auth/signin");
       }
-    } else {
-      router.push("/auth/signin")
-      return
-    }
+      setIsLoading(false);
+    };
+    checkUserAndFetchData();
+  }, [router, supabase])
 
-    const savedPosts = localStorage.getItem("safemode-posts")
-    if (savedPosts) {
-      setPosts(JSON.parse(savedPosts))
-    }
+  const deletePost = async (id: string) => {
+    if (confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
+      const { error } = await supabase.from('posts').delete().eq('id', id);
 
-    const savedSubscribers = localStorage.getItem("safemode-subscribers")
-    if (savedSubscribers) {
-      setSubscriberCount(JSON.parse(savedSubscribers).length)
+      if (error) {
+        toast({
+          title: "Error Deleting Post",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setPosts(posts.filter((post) => post.id !== id));
+        toast({
+          title: "Post Deleted",
+          description: "The post has been successfully deleted.",
+        });
+      }
     }
-    setIsLoading(false)
-  }, [router])
-
-  const deletePost = (id: string) => {
-    const updatedPosts = posts.filter((post) => post.id !== id)
-    setPosts(updatedPosts)
-    localStorage.setItem("safemode-posts", JSON.stringify(updatedPosts))
   }
 
   if (isLoading) {
@@ -76,10 +95,9 @@ export default function AdminDashboard() {
     )
   }
 
-  if (!user || user.role !== "admin") {
+  if (!user) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-        <Header />
         <main className="container mx-auto px-4 py-16">
           <Card className="bg-[#1A1A1A] border-[#333] glow-border max-w-md mx-auto">
             <CardContent className="p-8 text-center">
@@ -98,7 +116,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <h1 className="text-3xl font-bold text-[#61E8E1] font-mono">Admin Dashboard</h1>
