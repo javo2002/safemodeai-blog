@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Header } from "@/components/header"
 import { PostEditor } from "@/components/post-editor"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,7 +16,6 @@ interface User {
   role: "admin" | "user"
 }
 
-// This interface matches the PostEditor's onSave data structure
 interface PostEditorData {
   title: string
   content: string
@@ -51,6 +49,8 @@ export default function CreatePost() {
 
   const handleSave = async (postData: PostEditorData) => {
     setIsSaving(true)
+
+    // The database will automatically handle the 'id' and 'created_at' fields.
     const { error } = await supabase
       .from("posts")
       .insert([
@@ -64,7 +64,6 @@ export default function CreatePost() {
           sources: postData.sources,
         },
       ])
-      .select()
 
     setIsSaving(false)
 
@@ -82,7 +81,7 @@ export default function CreatePost() {
         className: "bg-[#1A1A1A] text-[#61E8E1] border-[#61E8E1]",
       })
       router.push("/admin")
-      router.refresh() 
+      router.refresh()
     }
   }
 
