@@ -1,20 +1,21 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react" // Removed useEffect
+import { useState } from "react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Send, Rss, Youtube, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 export function Footer() {
   const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
+  const supabase = createSupabaseBrowserClient()
 
-  const handleSubscription = (e: React.FormEvent) => {
+  const handleSubscription = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
       toast({
@@ -26,26 +27,34 @@ export function Footer() {
     }
 
     setIsSubmitting(true)
-    setTimeout(() => {
-      const subscribedEmails = JSON.parse(localStorage.getItem("safemode-subscribers") || "[]")
-      if (!subscribedEmails.includes(email)) {
-        subscribedEmails.push(email)
-        localStorage.setItem("safemode-subscribers", JSON.stringify(subscribedEmails))
-        toast({
-          title: "Subscription Successful!",
-          description: "You're now subscribed to SafemodeAI updates.",
-          className: "bg-[#1A1A1A] text-[#61E8E1] border-[#61E8E1]",
-        })
-      } else {
+    
+    const { error } = await supabase.from('subscribers').insert({ email: email });
+
+    if (error) {
+      // Handle potential duplicate email error gracefully
+      if (error.code === '23505') { // 23505 is the PostgreSQL error code for unique violation
         toast({
           title: "Already Subscribed",
           description: "This email is already on our list.",
           className: "bg-[#1A1A1A] text-[#EAEAEA] border-[#333]",
-        })
+        });
+      } else {
+        toast({
+          title: "Subscription Failed",
+          description: error.message,
+          variant: "destructive",
+        });
       }
-      setEmail("")
-      setIsSubmitting(false)
-    }, 1000)
+    } else {
+      toast({
+        title: "Subscription Successful!",
+        description: "You're now subscribed to SafemodeAI updates.",
+        className: "bg-[#1A1A1A] text-[#61E8E1] border-[#61E8E1]",
+      });
+      setEmail("");
+    }
+    
+    setIsSubmitting(false)
   }
 
   return (
@@ -106,7 +115,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-[#333] pt-8 flex flex-col sm:flex-row justify-between items-center text-sm">
-          <p>&copy; {new Date().getFullYear()} SafemodeAI. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} SafemodeAI. All rights reserved.</p>
           <div className="flex space-x-4 mt-4 sm:mt-0">
             <a
               href="https://youtube.com/@safemodeai"
