@@ -1,6 +1,6 @@
 "use server"
 
-import { SignJWT } from 'jose';
+import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -15,43 +15,47 @@ async function encrypt(payload: any) {
     .sign(key);
 }
 
+async function decrypt(input: string): Promise<any> {
+    try {
+        const { payload } = await jwtVerify(input, key, {
+            algorithms: ['HS256'],
+        });
+        return payload;
+    } catch (error) {
+        // This can happen if the token is invalid or expired
+        console.error("Failed to decrypt session:", error);
+        return null;
+    }
+}
+
 export async function login(formData: FormData) {
-  // In a real application, you'd verify the credentials against a database
+  // ... (login logic remains the same)
   const username = formData.get('username');
   const password = formData.get('password');
 
-  // For demonstration, using hardcoded credentials.
-  // REPLACE THIS with your actual authentication logic.
   if (username === 'admin' && password === 'safemode2024') {
     const user = { username: 'admin', role: 'admin' };
-
-    // Create the session
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
     const session = await encrypt({ user, expires });
-
-    // Save the session in a cookie
     cookies().set('session', session, { expires, httpOnly: true });
-
   } else if (username === 'user' && password === 'password') {
     const user = { username: 'user', role: 'user' };
-
-    // Create the session
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
     const session = await encrypt({ user, expires });
-
-    // Save the session in a cookie
     cookies().set('session', session, { expires, httpOnly: true });
   } else {
-    // Return an error message if login fails
     return { error: 'Invalid username or password' };
   }
-
-  // Redirect to the home page on successful login
   redirect('/');
 }
 
 export async function logout() {
-  // Destroy the session
   cookies().set('session', '', { expires: new Date(0) });
   redirect('/auth/signin');
+}
+
+export async function getSession() {
+  const session = cookies().get('session')?.value;
+  if (!session) return null;
+  return await decrypt(session);
 }
