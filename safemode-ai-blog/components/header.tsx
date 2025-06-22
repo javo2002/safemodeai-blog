@@ -11,12 +11,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
+import { getSession, logout } from "@/lib/auth"
 
 interface UserType {
   username: string
   role: "admin" | "user"
-  signedInAt: string
 }
 
 export function Header() {
@@ -25,25 +36,29 @@ export function Header() {
   const router = useRouter()
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("safemode-user")
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
+    const fetchSession = async () => {
+      const session = await getSession()
+      if (session) {
+        setUser(session.user)
+      }
     }
+    fetchSession()
   }, [])
 
-  const handleSignOut = () => {
-    localStorage.removeItem("safemode-user")
+  const handleSignOut = async () => {
+    await logout()
     setUser(null)
     router.push("/")
     router.refresh()
   }
 
   const deleteAllPosts = () => {
-    if (confirm("Are you sure you want to delete all posts? This action cannot be undone.")) {
-      localStorage.removeItem("safemode-posts")
-      alert("All posts have been deleted.")
-      router.refresh()
-    }
+    // This should be handled by a secure backend endpoint
+    console.log("Deleting all posts...")
+    // Simulate deletion for now
+    localStorage.removeItem("safemode-posts")
+    alert("All posts have been deleted.")
+    router.refresh()
   }
 
   return (
@@ -113,13 +128,29 @@ export function Header() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-[#333]" />
-                      <DropdownMenuItem
-                        onClick={deleteAllPosts}
-                        className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete All Posts
-                      </DropdownMenuItem>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer w-full justify-start"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete All Posts
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete all posts from the database.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={deleteAllPosts}>Continue</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
