@@ -1,9 +1,7 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,13 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, User } from "lucide-react"
-import { login } from "@/lib/auth"
-// Removed Info icon and Accordion components as they are no longer needed
+import { login } from "@/app/actions" // Use the server action
 
 export default function SignInPage() {
-  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | undefined>("")
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -26,14 +22,12 @@ export default function SignInPage() {
     setError("")
 
     const formData = new FormData(e.currentTarget)
-    const response = await login(formData)
+    const result = await login(formData)
 
-    if (response.success) {
-      router.push("/")
-    } else {
-      setError(response.error || "An unexpected error occurred.")
+    if (result?.error) {
+      setError(result.error)
     }
-
+    
     setIsLoading(false)
   }
 
@@ -62,6 +56,7 @@ export default function SignInPage() {
                       placeholder="Enter your username"
                       className="bg-[#0D0D0D] border-[#333] text-[#EAEAEA] focus:border-[#61E8E1] pl-10"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -79,6 +74,7 @@ export default function SignInPage() {
                       placeholder="Enter your password"
                       className="bg-[#0D0D0D] border-[#333] text-[#EAEAEA] focus:border-[#61E8E1] pl-10 pr-10"
                       required
+                      disabled={isLoading}
                     />
                     <Button
                       type="button"
@@ -93,7 +89,7 @@ export default function SignInPage() {
                 </div>
 
                 {error && (
-                  <Alert className="border-red-500 bg-red-500/10">
+                  <Alert variant="destructive" className="border-red-500 bg-red-500/10">
                     <AlertDescription className="text-red-400">{error}</AlertDescription>
                   </Alert>
                 )}
@@ -106,7 +102,6 @@ export default function SignInPage() {
                   {isLoading ? "Signing In..." : "Sign In"}
                 </Button>
               </form>
-              {/* Demo credentials section has been completely removed */}
             </CardContent>
           </Card>
         </div>
