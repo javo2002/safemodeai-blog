@@ -50,7 +50,7 @@ export default function AdminDashboard() {
       // Fetching can still use the browser client since RLS rules allow it for admins via service key on server actions
       const { data: postsData, error: postsError } = await supabase
         .from('posts')
-        .select('id, title, category, featured, createdAt, published')
+        .select('id, title, category, featured, created_at, published')
         .order('created_at', { ascending: false });
       
       if (postsError) console.error('Error fetching posts:', postsError);
@@ -157,7 +157,7 @@ export default function AdminDashboard() {
                         {post.published ? "Published" : "Draft"}
                       </Badge>
                     </div>
-                    <p className="text-sm text-[#AAAAAA]">Created: {new Date(post.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm text-[#AAAAAA]">Created: {new Date(post.created_at).toLocaleDateString()}</p>
                   </div>
                   <div className="flex gap-2 flex-shrink-0 self-start sm:self-auto mt-2 sm:mt-0">
                     <Link href={`/admin/edit/${post.id}`}>
