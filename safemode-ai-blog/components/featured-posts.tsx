@@ -1,80 +1,22 @@
-"use client"
+// File: components/featured-posts.tsx
 
-import { useState, useEffect, useRef } from "react"
+// REMOVED "use client" - This is now a Server Component
+
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, ArrowRight, CalendarDays } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ArrowRight, CalendarDays } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
-import { createSupabaseBrowserClient } from "@/lib/supabase/client"
-
-interface Post {
-  id: string
-  title: string
-  content: string
-  category: string
-  image: string
-  createdAt: string
-}
+// --- NEW: Import the server action ---
+import { getFeaturedPosts } from "@/app/actions"
 
 const PLACEHOLDER_SNIPPET = "Coming soon..."
 
-export function FeaturedPosts() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const supabase = createSupabaseBrowserClient()
+// --- The component is now an async function ---
+export async function FeaturedPosts() {
+  // --- Data is fetched directly on the server before rendering ---
+  const posts = await getFeaturedPosts();
 
-  useEffect(() => {
-    const fetchFeaturedPosts = async () => {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('id, title, content, category, image, createdAt')
-        .eq('published', true)
-        .eq('featured', true)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Error fetching featured posts:", error);
-      } else {
-        setPosts(data);
-      }
-    };
-    fetchFeaturedPosts();
-  }, [supabase])
-
-  const checkScrollButtons = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current
-      setCanScrollLeft(scrollLeft > 5)
-      setCanScrollRight(scrollWidth - clientWidth - scrollLeft > 5)
-    }
-  }
-
-  useEffect(() => {
-    checkScrollButtons()
-    const container = scrollContainerRef.current
-    if (container) {
-      container.addEventListener("scroll", checkScrollButtons)
-      window.addEventListener("resize", checkScrollButtons)
-      return () => {
-        container.removeEventListener("scroll", checkScrollButtons)
-        window.removeEventListener("resize", checkScrollButtons)
-      }
-    }
-  }, [posts])
-
-  const scroll = (direction: "left" | "right") => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = scrollContainerRef.current.clientWidth * 0.7
-      const newScrollLeft =
-        scrollContainerRef.current.scrollLeft + (direction === "left" ? -scrollAmount : scrollAmount)
-      scrollContainerRef.current.scrollTo({ left: newScrollLeft, behavior: "smooth" })
-    }
-  }
-
-  if (posts.length === 0) {
+  if (!posts || posts.length === 0) {
     return (
       <section className="py-16 px-4">
         <div className="container mx-auto">
@@ -87,12 +29,14 @@ export function FeaturedPosts() {
     )
   }
 
+  // NOTE: The carousel functionality with buttons has been removed for simplicity
+  // as it requires client-side hooks ("use client"). This can be re-added later if needed
+  // by wrapping the scrolling part in a separate client component.
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto relative">
         <h2 className="text-3xl font-bold text-[#61E8E1] font-mono mb-10">Featured Posts</h2>
         <div
-          ref={scrollContainerRef}
           className="flex gap-6 overflow-x-auto scrollbar-hide pb-4"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
@@ -137,26 +81,6 @@ export function FeaturedPosts() {
             )
           })}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`absolute left-0 sm:-left-4 top-1/2 -translate-y-1/2 z-10 bg-[#0D0D0D]/80 border border-[#61E8E1] text-[#61E8E1] hover:bg-[#61E8E1] hover:text-[#0D0D0D] transition-all duration-300 rounded-full w-8 h-8 sm:w-10 sm:h-10 ${!canScrollLeft ? "opacity-30 cursor-not-allowed" : "opacity-100"}`}
-          onClick={() => scroll("left")}
-          disabled={!canScrollLeft}
-          aria-label="Scroll left"
-        >
-          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`absolute right-0 sm:-right-4 top-1/2 -translate-y-1/2 z-10 bg-[#0D0D0D]/80 border border-[#61E8E1] text-[#61E8E1] hover:bg-[#61E8E1] hover:text-[#0D0D0D] transition-all duration-300 rounded-full w-8 h-8 sm:w-10 sm:h-10 ${!canScrollRight ? "opacity-30 cursor-not-allowed" : "opacity-100"}`}
-          onClick={() => scroll("right")}
-          disabled={!canScrollRight}
-          aria-label="Scroll right"
-        >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-        </Button>
       </div>
     </section>
   )
