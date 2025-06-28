@@ -1,9 +1,7 @@
-// This is a new file
-
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, Link as LinkIcon, Edit, CheckCircle } from "lucide-react";
+import { ArrowLeft, Link as LinkIcon, Edit, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPostForPreview, approvePost, getSession } from "@/app/actions";
 import Link from "next/link";
@@ -30,11 +28,15 @@ export default async function PostPreviewPage({ params }: { params: { id: string
       redirect('/admin');
     }
   }
+  
+  const isURL = (str: string) => {
+    try { new URL(str); return true; } catch (_) { return false; }
+  }
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
       {/* Admin Preview Bar */}
-      <div className="bg-[#1A1A1A] border-b border-yellow-400/50 py-3">
+      <div className="bg-[#1A1A1A] border-b border-yellow-400/50 py-3 sticky top-0 z-50">
         <div className="container mx-auto px-4 flex justify-between items-center">
           <div>
             <p className="text-yellow-400 font-bold">ADMIN PREVIEW MODE</p>
@@ -51,13 +53,16 @@ export default async function PostPreviewPage({ params }: { params: { id: string
                 </Button>
               </form>
             )}
+            <Link href="/admin">
+                <Button variant="ghost" size="sm"><ArrowLeft className="mr-2 h-4 w-4"/> Back to Dashboard</Button>
+            </Link>
           </div>
         </div>
       </div>
 
       <main className="container mx-auto px-4 py-8 md:py-12">
         <div className="max-w-3xl mx-auto">
-          {/* Article content starts here, similar to the public post page */}
+          {/* Article content starts here */}
           <article>
             <header className="mb-8">
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#EAEAEA] font-mono mb-4 glow-text leading-tight">
@@ -88,14 +93,38 @@ export default async function PostPreviewPage({ params }: { params: { id: string
 
             <div
               className="prose prose-invert prose-lg max-w-none text-[#EAEAEA] space-y-6"
-              style={{ "--tw-prose-headings": "#61E8E1", lineHeight: "1.7" } as React.CSSProperties}
-              dangerouslySetInnerHTML={{ __html: post.content ? post.content.replace(/\n/g, '<br />') : '' }}
+              style={{ "--tw-prose-headings": "#61E8E1", "--tw-prose-links": "#61E8E1", "--tw-prose-bullets": "#61E8E1", lineHeight: "1.7" } as React.CSSProperties}
+              dangerouslySetInnerHTML={{ __html: post.content || '' }}
             />
-            
-            {/* ... (sources section can be added here if needed) ... */}
+
+            {post.sources && post.sources.length > 0 && (
+              <div className="mt-12 pt-8 border-t border-[#61E8E1]/30">
+                <h2 className="text-2xl font-bold text-[#61E8E1] font-mono mb-4 glow-text">Sources</h2>
+                <ul className="space-y-2 list-none pl-0">
+                  {post.sources.map((source, index) => (
+                    <li key={index} className="text-sm text-[#AAAAAA] flex items-start">
+                      <LinkIcon className="w-4 h-4 mr-2 mt-1 text-[#61E8E1] flex-shrink-0" />
+                      {isURL(source) ? (
+                        <a
+                          href={source}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-[#61E8E1] hover:underline break-all"
+                        >
+                          {source}
+                        </a>
+                      ) : (
+                        <span>{source}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </article>
         </div>
       </main>
     </div>
   );
 }
+
