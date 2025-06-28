@@ -64,7 +64,7 @@ export async function FeaturedPosts() {
                       </Badge>
                       <div className="flex items-center text-xs text-[#AAAAAA]">
                         <CalendarDays className="w-3 h-3 mr-1.5 text-[#61E8E1]" />
-                        {new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </div>
                     </div>
                     <h3 className="text-base sm:text-lg font-bold text-[#EAEAEA] mb-3 line-clamp-2 group-hover:text-[#61E8E1] transition-colors">
