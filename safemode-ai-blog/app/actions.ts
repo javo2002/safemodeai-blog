@@ -88,3 +88,38 @@ export async function getSession() {
   if (!session) return null;
   return await decrypt(session);
 }
+
+// --- ADD THIS NEW SERVER ACTION AT THE END OF THE FILE ---
+export async function createPost(postData: any) {
+  const session = await getSession();
+  
+  // 1. Check if the user is an admin
+  if (!session?.user || session.user.role !== 'admin') {
+    return { error: 'Access Denied. You must be an administrator.' };
+  }
+
+  // 2. Use the secure server client to perform the insert
+  const supabase = createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from("posts")
+    .insert([
+      {
+        title: postData.title,
+        content: postData.content,
+        category: postData.category,
+        featured: postData.featured,
+        image: postData.image,
+        published: postData.published,
+        sources: postData.sources,
+      },
+    ]);
+
+  if (error) {
+    console.error("Server Action Error creating post:", error);
+    return { error: error.message };
+  }
+
+  // On success, return a success message (or the new post data)
+  return { success: true };
+}
