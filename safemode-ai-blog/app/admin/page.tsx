@@ -1,5 +1,3 @@
-// File: app/admin/page.tsx
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -7,33 +5,32 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Lock, Users, Newspaper } from "lucide-react"
+import { Plus, Edit, Trash2, Lock, Users, Newspaper, CheckCircle, Clock } from "lucide-react"
 import Link from "next/link"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-// --- NEW: Import server actions ---
-import { getSession, deletePost } from "@/app/actions"
+import { getSession, deletePost, approvePost, submitForApproval } from "@/app/actions"
 
-// ... (Interface definitions for Post, User remain the same)
 interface Post {
   id: string;
   title: string;
   category: string;
   featured: boolean;
   created_at: string;
-  published: boolean;
+  status: 'draft' | 'pending_approval' | 'published';
+  user_id: string;
 }
 
 interface User {
+  id: string;
   username: string;
-  role: "admin" | "user";
+  role: "super-admin" | "author";
 }
 
 export default function AdminDashboard() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [subscriberCount, setSubscriberCount] = useState(0);
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const { toast } = useToast();
@@ -41,144 +38,133 @@ export default function AdminDashboard() {
   useEffect(() => {
     const checkUserAndFetchData = async () => {
       const session = await getSession();
-      if (session?.user?.role !== 'admin') {
+      if (!session?.user) {
         router.push("/auth/signin");
         return;
       }
       setUser(session.user);
-      
-      // Fetching can still use the browser client since RLS rules allow it for admins via service key on server actions
-      const { data: postsData, error: postsError } = await supabase
-        .from('posts')
-        .select('id, title, category, featured, created_at, published')
-        .order('created_at', { ascending: false });
-      
-      if (postsError) console.error('Error fetching posts:', postsError);
-      else setPosts(postsData || []);
-      
-      const { count, error: countError } = await supabase
-        .from('subscribers')
-        .select('*', { count: 'exact', head: true });
-        
-      if (countError) console.error('Error fetching subscriber count:', countError);
-      else setSubscriberCount(count || 0);
 
+      let query = supabase.from('posts').select('*');
+      
+      // Super-admin sees all posts, authors see only their own.
+      if (session.user.role === 'author') {
+        query = query.eq('user_id', session.user.id);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) {
+        toast({ title: "Error", description: "Could not fetch posts.", variant: "destructive" });
+      } else {
+        setPosts(data || []);
+      }
       setIsLoading(false);
     };
     checkUserAndFetchData();
-  }, [router, supabase]);
+  }, [router, supabase, toast]);
 
-  // --- REWRITTEN deletePost LOGIC ---
-  const handleDeletePost = async (id: string) => {
-    if (confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
-      const result = await deletePost(id); // Call the server action
-
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to delete this post?")) {
+      const result = await deletePost(id);
       if (result.error) {
-        toast({
-          title: "Error Deleting Post",
-          description: result.error,
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: result.error, variant: "destructive" });
       } else {
-        setPosts(posts.filter((post) => post.id !== id));
-        toast({
-          title: "Post Deleted",
-          description: "The post has been successfully deleted.",
-        });
+        setPosts(posts.filter((p) => p.id !== id));
+        toast({ title: "Success", description: "Post deleted." });
       }
     }
-  }
+  };
 
-  // The JSX for this component remains the same, but the onClick for the delete button is updated.
-  // Make sure the entire return statement is present and the onClick is updated as shown.
-   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-[#61E8E1] text-lg font-mono animate-pulse">Initializing Dashboard...</div>
-        </div>
-      </div>
-    );
-  }
+  const handleApproval = async (id: string) => {
+      const result = await approvePost(id);
+      if (result.error) {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+      } else {
+        setPosts(posts.map(p => p.id === id ? { ...p, status: 'published' } : p));
+        toast({ title: "Success", description: "Post has been published." });
+      }
+  };
 
-  if (!user) {
-    // This part should ideally not be reached due to the redirect in useEffect
-    return <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA] flex items-center justify-center">Access Denied</div>;
-  }
-  
+    const handleSubmitForApproval = async (id: string) => {
+      const result = await submitForApproval(id);
+      if (result.error) {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+      } else {
+        setPosts(posts.map(p => p.id === id ? { ...p, status: 'pending_approval' } : p));
+        toast({ title: "Success", description: "Post submitted for approval." });
+      }
+  };
+
+  const pendingPosts = posts.filter(p => p.status === 'pending_approval');
+  const myPosts = user?.role === 'author' ? posts : posts.filter(p => p.user_id === user?.id);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (!user) return null;
+
   return (
-     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
+    <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
       <main className="container mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-[#61E8E1] font-mono">Admin Dashboard</h1>
           <Link href="/admin/create">
-            <Button className="bg-[#61E8E1] text-[#0D0D0D] hover:bg-[#4DD4D4] font-semibold w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-2" />
-              Create New Post
+            <Button className="bg-[#61E8E1] text-[#0D0D0D] hover:bg-[#4DD4D4] font-semibold">
+              <Plus className="w-4 h-4 mr-2" /> Create New Post
             </Button>
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card className="bg-[#1A1A1A] border-[#333] glow-border">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-[#AAAAAA]">Total Posts</CardTitle>
-              <Newspaper className="h-5 w-5 text-[#61E8E1]" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-[#EAEAEA]">{posts.length}</div>
-              <p className="text-xs text-[#AAAAAA] pt-1">Manage all your articles from here.</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-[#1A1A1A] border-[#333] glow-border">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-[#AAAAAA]">Newsletter Subscribers</CardTitle>
-              <Users className="h-5 w-5 text-[#61E8E1]" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-[#EAEAEA]">{subscriberCount}</div>
-              <p className="text-xs text-[#AAAAAA] pt-1">Users subscribed for updates.</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <h2 className="text-2xl font-bold text-[#61E8E1] font-mono mb-6">Manage Posts</h2>
-        <div className="grid gap-4">
-          {posts.map((post) => (
-            <Card key={post.id} className="bg-[#1A1A1A] border-[#333] glow-border hover:glow-border-intense transition-all duration-300">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-3 sm:gap-2">
+        {/* Approval Queue for Super Admin */}
+        {user.role === 'super-admin' && pendingPosts.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-[#61E8E1] font-mono mb-6">Approval Queue</h2>
+            {pendingPosts.map(post => (
+              <Card key={post.id} className="bg-[#1A1A1A] border-[#333] mb-4">
+                <CardHeader className="flex flex-row justify-between items-center">
                   <div>
-                    <CardTitle className="text-[#EAEAEA] mb-1 sm:mb-2">{post.title}</CardTitle>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      <Badge variant="outline" className="border-[#61E8E1] text-[#61E8E1]">{post.category}</Badge>
-                      {post.featured && <Badge className="bg-[#61E8E1] text-[#0D0D0D]">Featured</Badge>}
-                      <Badge variant={post.published ? "default" : "secondary"} className={post.published ? "bg-[#61E8E1]/80 text-[#0D0D0D]" : "bg-[#333] text-[#AAAAAA]"}>
-                        {post.published ? "Published" : "Draft"}
-                      </Badge>
+                    <CardTitle>{post.title}</CardTitle>
+                    <Badge variant="secondary">Pending Approval</Badge>
+                  </div>
+                  <Button onClick={() => handleApproval(post.id)} size="sm" className="bg-green-500 hover:bg-green-600">
+                    <CheckCircle className="w-4 h-4 mr-2" />Approve
+                  </Button>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* My Posts Section */}
+        <div>
+           <h2 className="text-2xl font-bold text-[#61E8E1] font-mono mb-6">
+                {user.role === 'super-admin' ? "All Posts" : "My Posts"}
+            </h2>
+            <div className="grid gap-4">
+            {posts.map((post) => (
+              <Card key={post.id} className="bg-[#1A1A1A] border-[#333]">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-[#EAEAEA] mb-2">{post.title}</CardTitle>
+                        <div className="flex gap-2 items-center">
+                            <Badge variant={post.status === 'published' ? 'default' : 'secondary'} className={post.status === 'published' ? "bg-green-500" : "bg-yellow-500"}>
+                                {post.status.replace('_', ' ')}
+                            </Badge>
+                             {post.status === 'draft' && (
+                                <Button onClick={() => handleSubmitForApproval(post.id)} size="sm" variant="outline" className="border-yellow-500 text-yellow-500">
+                                    <Clock className="w-4 h-4 mr-2" /> Submit for Approval
+                                </Button>
+                            )}
+                        </div>
                     </div>
-                    <p className="text-sm text-[#AAAAAA]">Created: {new Date(post.created_at).toLocaleDateString()}</p>
+                    <div className="flex gap-2">
+                      <Link href={`/admin/edit/${post.id}`}><Button size="sm" variant="outline"><Edit className="w-4 h-4" /></Button></Link>
+                      <Button size="sm" variant="destructive" onClick={() => handleDelete(post.id)}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0 self-start sm:self-auto mt-2 sm:mt-0">
-                    <Link href={`/admin/edit/${post.id}`}>
-                      <Button size="sm" variant="outline" className="border-[#61E8E1] text-[#61E8E1] hover:bg-[#61E8E1] hover:text-[#0D0D0D]" aria-label={`Edit post: ${post.title}`}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </Link>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-                      onClick={() => handleDeletePost(post.id)} // UPDATED THIS LINE
-                      aria-label={`Delete post: ${post.title}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
+                </CardHeader>
+              </Card>
+            ))}
+            </div>
         </div>
       </main>
     </div>
