@@ -161,3 +161,56 @@ export async function getAllPublishedPosts() {
 
   return data;
 }
+
+// File: app/actions.ts
+
+// ... (keep all the existing code for login, createPost, getFeaturedPosts, etc.)
+
+// --- ADD THE updatePost ACTION ---
+export async function updatePost(postId: string, postData: any) {
+  const session = await getSession();
+  if (!session?.user || session.user.role !== 'admin') {
+    return { error: 'Access Denied.' };
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from('posts')
+    .update({
+      title: postData.title,
+      content: postData.content,
+      category: postData.category,
+      featured: postData.featured,
+      image: postData.image,
+      published: postData.published,
+      sources: postData.sources,
+      // updated_at is handled automatically by the database trigger
+    })
+    .eq('id', postId);
+
+  if (error) {
+    console.error("Server Action Error updating post:", error);
+    return { error: error.message };
+  }
+  return { success: true };
+}
+
+// --- ADD THE deletePost ACTION ---
+export async function deletePost(postId: string) {
+  const session = await getSession();
+  if (!session?.user || session.user.role !== 'admin') {
+    return { error: 'Access Denied.' };
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('id', postId);
+  
+  if (error) {
+    console.error("Server Action Error deleting post:", error);
+    return { error: error.message };
+  }
+  return { success: true };
+}
