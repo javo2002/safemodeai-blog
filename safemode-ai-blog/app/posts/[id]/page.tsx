@@ -5,10 +5,11 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Clock, Link as LinkIcon } from "lucide-react"
+import { ArrowLeft, Link as LinkIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
+// This interface should match the data structure including the joined user data
 interface Post {
   id: string
   title: string
@@ -17,9 +18,10 @@ interface Post {
   image: string
   created_at: string
   sources?: string[]
+  users: {
+    username: string;
+  } | null;
 }
-
-const PLACEHOLDER_CONTENT = "Coming soon..."
 
 export default function PostPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -30,15 +32,18 @@ export default function PostPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchPost = async () => {
       if (params.id) {
+        // Fetch the post and join the author's username from the 'users' table
         const { data, error } = await supabase
           .from('posts')
-          .select('*')
+          .select('*, users (username)')
           .eq('id', params.id)
+          .eq('status', 'published') // Ensure only published posts can be viewed
           .single();
         
-        if (error) {
-          console.error("Error fetching post:", error);
-          setPost(null);
+        if (error || !data) {
+          console.error("Error fetching post or post not found/published:", error);
+          // Redirect to home if post isn't found or accessible
+          router.push('/');
         } else {
           setPost(data);
         }
@@ -46,15 +51,10 @@ export default function PostPage({ params }: { params: { id: string } }) {
       setIsLoading(false)
     }
     fetchPost()
-  }, [params.id, supabase])
+  }, [params.id, supabase, router])
 
   const isURL = (str: string) => {
-    try {
-      new URL(str)
-      return true
-    } catch (_) {
-      return false
-    }
+    try { new URL(str); return true; } catch (_) { return false; }
   }
 
   if (isLoading) {
@@ -68,11 +68,12 @@ export default function PostPage({ params }: { params: { id: string } }) {
   }
 
   if (!post) {
+    // This state is briefly visible before the redirect happens.
     return (
       <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
         <main className="container mx-auto px-4 py-16 text-center">
           <h1 className="text-3xl font-bold text-[#61E8E1] font-mono mb-4">Post Not Found</h1>
-          <p className="text-[#AAAAAA] mb-8">The post you are looking for does not exist or could not be loaded.</p>
+          <p className="text-[#AAAAAA] mb-8">The post you are looking for does not exist or is not available.</p>
           <Button onClick={() => router.push("/")} className="bg-[#61E8E1] text-[#0D0D0D] hover:bg-[#4DD4D4]">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
@@ -81,8 +82,6 @@ export default function PostPage({ params }: { params: { id: string } }) {
       </div>
     )
   }
-
-  const displayContent = post.content && post.content.trim() !== "" ? post.content : PLACEHOLDER_CONTENT
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
@@ -106,21 +105,22 @@ export default function PostPage({ params }: { params: { id: string } }) {
                 <Badge variant="outline" className="border-[#61E8E1] text-[#61E8E1] text-sm font-mono px-3 py-1">
                   {post.category}
                 </Badge>
-                <p className="text-sm text-[#AAAAAA]">
-                  Published on{" "}
+                <div className="text-sm text-[#AAAAAA]">
+                  <span>By: {post.users?.username || 'SafemodeAI'}</span> | <span>
                   {new Date(post.created_at).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
                   })}
-                </p>
+                  </span>
+                </div>
               </div>
             </header>
 
             {post.image && (
               <div className="relative w-full aspect-[16/9] mb-8 md:mb-10 rounded-lg overflow-hidden glow-border">
                 <Image
-                  src={post.image || "/placeholder.svg?height=450&width=800&query=default+post+image"}
+                  src={post.image}
                   alt={post.title}
                   fill
                   className="object-cover"
@@ -130,34 +130,10 @@ export default function PostPage({ params }: { params: { id: string } }) {
             )}
 
             <div
-              className="prose prose-invert prose-lg max-w-none text-[#EAEAEA] space-y-6 selection:bg-[#61E8E1] selection:text-[#0D0D0D]"
-              style={
-                {
-                  "--tw-prose-headings": "#61E8E1",
-                  "--tw-prose-links": "#61E8E1",
-                  "--tw-prose-bullets": "#61E8E1",
-                  "--tw-prose-quotes": "#AAAAAA",
-                  "--tw-prose-quote-borders": "#333333",
-                  "--tw-prose-hr": "#333333",
-                  lineHeight: "1.7",
-                } as React.CSSProperties
-              }
-            >
-              {displayContent === PLACEHOLDER_CONTENT ? (
-                <div className="flex items-center justify-center text-center py-10 bg-[#1A1A1A]/50 rounded-md glow-border">
-                  <Clock className="w-8 h-8 mr-3 text-[#61E8E1]" />
-                  <p className="text-2xl font-mono text-[#61E8E1]">{PLACEHOLDER_CONTENT}</p>
-                </div>
-              ) : (
-                displayContent.split("\n\n").map((paragraphBlock, index) => (
-                  <div key={index} className="space-y-4">
-                    {paragraphBlock.split("\n").map((paragraph, pIndex) => (
-                      <p key={pIndex}>{paragraph}</p>
-                    ))}
-                  </div>
-                ))
-              )}
-            </div>
+              className="prose prose-invert prose-lg max-w-none text-[#EAEAEA] space-y-6"
+              style={{ "--tw-prose-headings": "#61E8E1", "--tw-prose-links": "#61E8E1", "--tw-prose-bullets": "#61E8E1", lineHeight: "1.7" } as React.CSSProperties}
+              dangerouslySetInnerHTML={{ __html: post.content || '' }}
+            />
 
             {post.sources && post.sources.length > 0 && (
               <div className="mt-12 pt-8 border-t border-[#61E8E1]/30">
