@@ -1,5 +1,3 @@
-# safemodeai-blog
-
 # SafemodeAI Blog
 
 SafemodeAI Blog is a full-stack blogging platform built with Next.js, Supabase, and Tailwind CSS. It provides a complete solution for creating, managing, and displaying blog posts with user authentication and role-based access control.
