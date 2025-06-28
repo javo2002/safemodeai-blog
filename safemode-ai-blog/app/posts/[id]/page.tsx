@@ -15,7 +15,7 @@ interface Post {
   content: string
   category: string
   image: string
-  createdAt: string
+  created_at: string
   sources?: string[]
 }
 
@@ -108,7 +108,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
                 </Badge>
                 <p className="text-sm text-[#AAAAAA]">
                   Published on{" "}
-                  {new Date(post.createdAt).toLocaleDateString("en-US", {
+                  {new Date(post.created_at).toLocaleDateString("en-US", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
