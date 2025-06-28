@@ -72,3 +72,23 @@ create policy "Admins can read subscribers"
 -- (This is not secure for public facing apps without further checks).
 -- For simplicity, the code will use the anon key, assuming RLS is configured to allow admin actions
 -- or you'll later move mutations to Server Actions using the service_role key.
+
+-- Create Admins Table
+create table public.admins (
+  id uuid primary key default uuid_generate_v4(),
+  username text not null unique,
+  password_hash text not null,
+  role text not null default 'admin',
+  created_at timestamptz default now()
+);
+
+-- RLS for Admins table
+-- Enable RLS
+alter table public.admins enable row level security;
+
+-- No one should be able to read the admins table publicly.
+-- We will only query it from the server using the service_role key.
+create policy "Deny all access to admins table"
+  on public.admins for all
+  using (false)
+  with check (false);
