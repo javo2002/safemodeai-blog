@@ -123,3 +123,23 @@ export async function createPost(postData: any) {
   // On success, return a success message (or the new post data)
   return { success: true };
 }
+
+// --- ADD THIS NEW SERVER ACTION AT THE END OF THE FILE ---
+export async function getFeaturedPosts() {
+  const supabase = createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from('posts')
+    .select('id, title, content, category, image, createdAt')
+    .eq('published', true)
+    .eq('featured', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Server Action Error fetching featured posts:", error);
+    // In a real app, you might want to handle this error more gracefully
+    return []; 
+  }
+
+  return data;
+}
