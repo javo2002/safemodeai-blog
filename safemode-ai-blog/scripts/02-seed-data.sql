@@ -68,3 +68,13 @@ values
 
 -- Seed a subscriber for testing
 insert into public.subscribers (email) values ('test.subscriber@example.com');
+
+-- Seed Admins
+-- IMPORTANT: In a real application, these passwords should be hashed
+-- using a secure algorithm like bcrypt or argon2 before being inserted.
+insert into public.admins (username, password_hash, role)
+values
+  ('john_safemode', 'replace_with_a_strong_password_for_john', 'admin'),
+  ('zay_safemode', 'replace_with_a_strong_password_for_zay', 'admin'),
+  ('javi_safemode', 'replace_with_a_strong_password_for_javi', 'admin');
+
