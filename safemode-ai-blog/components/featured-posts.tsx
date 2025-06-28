@@ -1,20 +1,24 @@
 // File: components/featured-posts.tsx
 
-// REMOVED "use client" - This is now a Server Component
+// This is now a "dumb" component. It only displays data.
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight, CalendarDays } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
-import Link from "next/link"
-import { ArrowRight, CalendarDays } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import Image from "next/image"
-// --- NEW: Import the server action ---
-import { getFeaturedPosts } from "@/app/actions"
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  image: string;
+  created_at: string;
+}
 
-const PLACEHOLDER_SNIPPET = "Coming soon..."
+const PLACEHOLDER_SNIPPET = "Coming soon...";
 
-// --- The component is now an async function ---
-export async function FeaturedPosts() {
-  // --- Data is fetched directly on the server before rendering ---
-  const posts = await getFeaturedPosts();
+// The component receives 'posts' as a prop
+export function FeaturedPosts({ posts }: { posts: Post[] }) {
 
   if (!posts || posts.length === 0) {
     return (
@@ -26,29 +30,23 @@ export async function FeaturedPosts() {
           </div>
         </div>
       </section>
-    )
+    );
   }
 
-  // NOTE: The carousel functionality with buttons has been removed for simplicity
-  // as it requires client-side hooks ("use client"). This can be re-added later if needed
-  // by wrapping the scrolling part in a separate client component.
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto relative">
         <h2 className="text-3xl font-bold text-[#61E8E1] font-mono mb-10">Featured Posts</h2>
-        <div
-          className="flex gap-6 overflow-x-auto scrollbar-hide pb-4"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
+        <div className="flex gap-6 overflow-x-auto scrollbar-hide pb-4">
           {posts.map((post) => {
             const snippet =
-              post.content && post.content.trim() !== "" ? `${post.content.substring(0, 100)}...` : PLACEHOLDER_SNIPPET
+              post.content && post.content.trim() !== "" ? `${post.content.substring(0, 100)}...` : PLACEHOLDER_SNIPPET;
             return (
               <Link href={`/posts/${post.id}`} key={post.id} className="flex-none w-72 sm:w-80 group">
                 <div className="bg-[#1A1A1A] rounded-lg overflow-hidden glow-border hover:glow-border-intense hover:scale-103 transition-all duration-300 h-full flex flex-col">
                   <div className="relative h-40 sm:h-48 overflow-hidden">
                     <Image
-                      src={post.image || "/placeholder.svg?height=200&width=400&query=abstract+tech+pattern"}
+                      src={post.image || "/placeholder.svg?height=200&width=400&query=tech"}
                       alt={post.title}
                       fill
                       className="object-cover group-hover:scale-110 transition-transform duration-300"
@@ -56,10 +54,7 @@ export async function FeaturedPosts() {
                   </div>
                   <div className="p-4 sm:p-6 flex flex-col flex-grow">
                     <div className="flex justify-between items-center mb-3">
-                      <Badge
-                        variant="outline"
-                        className="border-[#61E8E1] text-[#61E8E1] text-xs font-mono px-2 py-0.5"
-                      >
+                      <Badge variant="outline" className="border-[#61E8E1] text-[#61E8E1] text-xs font-mono px-2 py-0.5">
                         {post.category}
                       </Badge>
                       <div className="flex items-center text-xs text-[#AAAAAA]">
@@ -78,10 +73,10 @@ export async function FeaturedPosts() {
                   </div>
                 </div>
               </Link>
-            )
+            );
           })}
         </div>
       </div>
     </section>
-  )
+  );
 }
