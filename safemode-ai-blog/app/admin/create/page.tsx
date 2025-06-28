@@ -1,3 +1,5 @@
+// File: app/admin/create/page.tsx
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -7,15 +9,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Lock } from "lucide-react"
 import Link from "next/link"
-import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { getSession } from "@/app/actions"
+// --- NEW: Import the server actions ---
+import { getSession, createPost } from "@/app/actions"
 
-interface User {
-  username: string
-  role: "admin" | "user"
-}
-
+// Define the shape of the data needed by the action
 interface PostEditorData {
   title: string
   content: string
@@ -29,10 +27,9 @@ interface PostEditorData {
 export default function CreatePost() {
   const router = useRouter()
   const { toast } = useToast()
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<{ username: string; role: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
     const checkUser = async () => {
@@ -47,31 +44,20 @@ export default function CreatePost() {
     checkUser();
   }, [router])
 
+  // --- REWRITTEN handleSave LOGIC ---
   const handleSave = async (postData: PostEditorData) => {
     setIsSaving(true)
 
-    // The database will automatically handle the 'id' and 'created_at' fields.
-    const { error } = await supabase
-      .from("posts")
-      .insert([
-        {
-          title: postData.title,
-          content: postData.content,
-          category: postData.category,
-          featured: postData.featured,
-          image: postData.image,
-          published: postData.published,
-          sources: postData.sources,
-        },
-      ])
+    // Call the new, secure server action
+    const result = await createPost(postData);
 
     setIsSaving(false)
 
-    if (error) {
-      console.error("Error creating post:", error)
+    if (result.error) {
+      console.error("Error creating post:", result.error)
       toast({
         title: "Error Creating Post",
-        description: error.message || "Could not save the post to the database.",
+        description: result.error || "Could not save the post.",
         variant: "destructive",
       })
     } else {
@@ -85,6 +71,7 @@ export default function CreatePost() {
     }
   }
 
+  // --- The rest of the component's JSX remains the same ---
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA] flex items-center justify-center">
