@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,10 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Save, Loader2, UploadCloud } from "lucide-react"
+import { Save, Loader2, UploadCloud, Image as ImageIcon } from "lucide-react" // Added ImageIcon
 import { useToast } from "@/hooks/use-toast"
 import { uploadPostImage } from "@/app/actions"
+import NextImage from "next/image" // Using NextImage for optimized images
 
+// Interfaces remain the same
 interface PostData {
   title: string;
   content: string;
@@ -31,9 +33,10 @@ export interface SavedPostData extends Omit<PostData, "sources"> {
 
 interface PostEditorProps {
   initialData?: SavedPostData;
-  onSave: (data: Omit<SavedPostData, "id" | "createdAt">) => void;
+  onSave: (data: Omit<SavedPostData, "id" | "createdAt">) => Promise<void>; // Make onSave return a promise
   isSaving?: boolean;
 }
+
 
 export function PostEditor({ initialData, onSave, isSaving = false }: PostEditorProps) {
   const [formData, setFormData] = useState<PostData>({
@@ -45,33 +48,51 @@ export function PostEditor({ initialData, onSave, isSaving = false }: PostEditor
     published: initialData?.published || false,
     sources: initialData?.sources?.join("\n") || "",
   });
+  
+  // State for the instant preview
+  const [previewImage, setPreviewImage] = useState<string | null>(initialData?.image || null);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
   const categories = ["AI ETHICS", "CYBERSECURITY", "THREAT ANALYSIS", "PRIVACY", "MACHINE LEARNING", "DIGITAL RIGHTS", "TECH POLICY"];
 
+  // When initialData changes (e.g., on an edit page), update the preview
+  useEffect(() => {
+    setPreviewImage(initialData?.image || null);
+  }, [initialData?.image]);
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // --- INSTANT PREVIEW LOGIC ---
+    // Show a preview immediately using FileReader
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    // --- UPLOAD TO SERVER IN BACKGROUND ---
     setIsUploading(true);
+    const uploadFormData = new FormData();
+    uploadFormData.append('file', file);
+
     try {
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-
       const result = await uploadPostImage(uploadFormData);
-
       if (result.error) {
         toast({ title: "Image Upload Failed", description: result.error, variant: "destructive" });
+        setPreviewImage(initialData?.image || null); // Revert preview on error
       } else if (result.publicUrl) {
+        // Once successfully uploaded, update the actual form data with the permanent URL
         setFormData(prev => ({ ...prev, image: result.publicUrl as string }));
-        toast({ title: "Image Uploaded", description: "Image is ready to be saved with the post." });
+        setPreviewImage(result.publicUrl); // Ensure preview shows the final URL
+        toast({ title: "Image Uploaded", description: "Ready to save." });
       }
     } catch (err) {
-      console.error("An unexpected error occurred during upload:", err);
-      toast({ title: "Upload Failed", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
+      toast({ title: "Upload Failed", description: "An unexpected error occurred.", variant: "destructive" });
+      setPreviewImage(initialData?.image || null); // Revert preview
     } finally {
-      // This 'finally' block ensures the loading state is ALWAYS turned off.
       setIsUploading(false);
     }
   };
@@ -81,13 +102,11 @@ export function PostEditor({ initialData, onSave, isSaving = false }: PostEditor
       toast({ title: "Missing Fields", description: "Please fill in title and category.", variant: "destructive" });
       return;
     }
-
     const postToSave = {
       ...formData,
       published: publishedStatus,
       sources: formData.sources ? formData.sources.split("\n").map(s => s.trim()).filter(s => s !== "") : [],
     };
-
     onSave(postToSave);
   };
 
@@ -95,7 +114,8 @@ export function PostEditor({ initialData, onSave, isSaving = false }: PostEditor
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
             <Card className="bg-[#1A1A1A] border-[#333] glow-border">
-                <CardHeader><CardTitle className="text-[#61E8E1] font-mono">Post Content</CardTitle></CardHeader>
+                {/* ... Post Content Card remains the same ... */}
+                 <CardHeader><CardTitle className="text-[#61E8E1] font-mono">Post Content</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                     <div>
                         <Label htmlFor="title" className="text-[#EAEAEA] mb-2 block">Post Title *</Label>
@@ -137,11 +157,14 @@ export function PostEditor({ initialData, onSave, isSaving = false }: PostEditor
                                 </Button>
                                 <Input id="image-upload" type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isUploading || isSaving} />
                             </div>
-                            {formData.image && (
-                                <div className="w-full h-32 bg-[#0D0D0D] rounded border border-[#333] overflow-hidden">
-                                    <img src={formData.image} alt="Preview" className="w-full h-full object-cover" />
-                                </div>
-                            )}
+                            {/* --- CORRECTED PREVIEW LOGIC --- */}
+                            <div className="w-full h-32 bg-[#0D0D0D] rounded border border-[#333] overflow-hidden flex items-center justify-center">
+                                {previewImage ? (
+                                    <NextImage src={previewImage} alt="Preview" width={400} height={200} className="w-full h-full object-cover" />
+                                ) : (
+                                    <ImageIcon className="w-10 h-10 text-[#61E8E1]/30" />
+                                )}
+                            </div>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
