@@ -13,7 +13,7 @@ async function encrypt(payload: any) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('1h') // Session expires in 1 hour
+    .setExpirationTime('1h')
     .sign(key);
 }
 
@@ -45,13 +45,10 @@ export async function login(formData: FormData) {
     .single();
 
   if (queryError || !admin) {
-    console.error("Login attempt failed for user:", username, queryError);
     return { error: 'Invalid username or password.' };
   }
 
-  // In a real production app, use bcrypt.compare() here
   const isValidPassword = (password === admin.password_hash);
-
   if (!isValidPassword) {
     return { error: 'Invalid username or password.' };
   }
@@ -81,20 +78,9 @@ export async function createPost(postData: any) {
     return { error: 'Access Denied.' };
   }
   const supabase = createSupabaseServerClient();
-  const { error } = await supabase.from("posts").insert([
-    {
-      title: postData.title,
-      content: postData.content,
-      category: postData.category,
-      featured: postData.featured,
-      image: postData.image,
-      published: postData.published,
-      sources: postData.sources,
-    },
-  ]);
+  const { error } = await supabase.from("posts").insert([{ ...postData }]);
 
   if (error) {
-    console.error("Server Action Error creating post:", error);
     return { error: error.message };
   }
 
@@ -110,21 +96,9 @@ export async function updatePost(postId: string, postData: any) {
     return { error: 'Access Denied.' };
   }
   const supabase = createSupabaseServerClient();
-  const { error } = await supabase
-    .from('posts')
-    .update({
-      title: postData.title,
-      content: postData.content,
-      category: postData.category,
-      featured: postData.featured,
-      image: postData.image,
-      published: postData.published,
-      sources: postData.sources,
-    })
-    .eq('id', postId);
+  const { error } = await supabase.from('posts').update({ ...postData }).eq('id', postId);
 
   if (error) {
-    console.error("Server Action Error updating post:", error);
     return { error: error.message };
   }
 
@@ -144,7 +118,6 @@ export async function deletePost(postId: string) {
   const { error } = await supabase.from('posts').delete().eq('id', postId);
   
   if (error) {
-    console.error("Server Action Error deleting post:", error);
     return { error: error.message };
   }
   
@@ -171,18 +144,43 @@ export async function uploadPostImage(formData: FormData) {
   const fileName = `${session.user.username}-${Date.now()}.${fileExt}`;
   const filePath = `${session.user.username}/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from('post-images')
-    .upload(filePath, file);
+  const { error: uploadError } = await supabase.storage.from('post-images').upload(filePath, file);
 
   if (uploadError) {
-    console.error('Image Upload Error:', uploadError);
     return { error: 'Failed to upload image.' };
   }
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('post-images')
-    .getPublicUrl(filePath);
-
+  const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(filePath);
   return { publicUrl };
+}
+
+export async function getFeaturedPosts() {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('published', true)
+    .eq('featured', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Server Action Error fetching featured posts:", error);
+    return []; 
+  }
+  return data;
+}
+
+export async function getAllPublishedPosts() {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('published', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Server Action Error fetching all posts:", error);
+    return [];
+  }
+  return data;
 }
