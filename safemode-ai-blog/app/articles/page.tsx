@@ -1,18 +1,17 @@
 // File: app/articles/page.tsx
 
-"use client"
-
-import { useState, useEffect } from "react"
+// REMOVED "use client" - This is now a Server Component
 import Link from "next/link"
 import Image from "next/image"
 import { LayoutGrid, CalendarDays, ArrowRight } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+// --- NEW: Import the server action ---
+import { getAllPublishedPosts } from "@/app/actions"
 
-// --- CORRECTED: Post interface now includes the 'content' field ---
 interface Post {
   id: string
   title: string
-  content: string // Now we expect this from the API
+  content: string
   category: string
   image: string
   created_at: string
@@ -24,56 +23,20 @@ interface GroupedPosts {
 
 const PLACEHOLDER_SNIPPET = "Coming soon..."
 
-export default function AllArticlesPage() {
-  const [groupedPosts, setGroupedPosts] = useState<GroupedPosts>({})
-  const [isLoading, setIsLoading] = useState(true)
-  const [categories, setCategories] = useState<string[]>([])
-  const [openCategories, setOpenCategories] = useState<string[]>([])
+// The component is now an async Server Component
+export default async function AllArticlesPage() {
+  // Data is fetched securely on the server before the page is built
+  const allPosts = await getAllPublishedPosts();
 
-  useEffect(() => {
-    const fetchPostsFromApi = async () => {
-      try {
-        const response = await fetch('/.netlify/functions/api');
-        
-        if (!response.ok) {
-          throw new Error(`API responded with status: ${response.status}`);
-        }
+  const groupedPosts: GroupedPosts = allPosts.reduce((acc, post) => {
+    const category = post.category || "Uncategorized"
+    if (!acc[category]) acc[category] = []
+    acc[category].push(post)
+    return acc
+  }, {} as GroupedPosts)
 
-        const data: Post[] = await response.json();
-
-        const groups: GroupedPosts = data.reduce((acc, post) => {
-          const category = post.category || "Uncategorized"
-          if (!acc[category]) acc[category] = []
-          acc[category].push(post); // No longer need to add placeholder image
-          return acc
-        }, {} as GroupedPosts)
-
-        const sortedCategories = Object.keys(groups).sort()
-        setGroupedPosts(groups)
-        setCategories(sortedCategories)
-        if (sortedCategories.length > 0) setOpenCategories([sortedCategories[0]])
-
-      } catch (error) {
-        console.error("Error fetching posts from API:", error);
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchPostsFromApi()
-  }, [])
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-[#61E8E1] text-lg font-mono animate-pulse">Loading Articles...</div>
-        </div>
-      </div>
-    )
-  }
-
-  const totalPublishedPosts = Object.values(groupedPosts).reduce((sum, posts) => sum + posts.length, 0)
+  const categories = Object.keys(groupedPosts).sort();
+  const totalPublishedPosts = allPosts.length;
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
@@ -94,10 +57,10 @@ export default function AllArticlesPage() {
             </p>
           </div>
         ) : (
+          // Note: The Accordion now defaults to having all categories open
           <Accordion
             type="multiple"
-            value={openCategories}
-            onValueChange={setOpenCategories}
+            defaultValue={categories} // Default to all categories open
             className="w-full space-y-4"
           >
             {categories.map((category) => (
@@ -113,7 +76,6 @@ export default function AllArticlesPage() {
                 <AccordionContent className="pt-6 pb-10">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                     {groupedPosts[category].map((post) => {
-                      // --- CORRECTED: Generating a real snippet from post.content ---
                       const snippet =
                         post.content && post.content.trim() !== ""
                           ? `${post.content.substring(0, 120)}...`
