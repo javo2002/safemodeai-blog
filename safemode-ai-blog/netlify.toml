@@ -1,3 +1,5 @@
+# File: netlify.toml
+
 [build]
   # This tells Netlify where your Next.js project is located.
   base = "safemode-ai-blog"
@@ -13,3 +15,8 @@
 # This plugin is correct and necessary.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# --- ADD THIS SECTION ---
+[functions]
+  # This tells Netlify to look for serverless functions in a 'netlify/functions' directory
+  directory = "netlify/functions"
