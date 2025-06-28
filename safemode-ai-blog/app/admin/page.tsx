@@ -11,12 +11,16 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { getSession, deletePost, approvePost, submitForApproval } from "@/app/actions"
 
+// We now expect the author's username to be nested.
 interface Post {
   id: string;
   title: string;
   category: string;
   status: 'draft' | 'pending_approval' | 'published';
   user_id: string;
+  users: {
+    username: string;
+  } | null; // The author's username
 }
 
 interface User {
@@ -42,11 +46,11 @@ export default function AdminDashboard() {
       }
       setUser(session.user);
 
-      // --- CORRECTED LOGIC ---
-      // This query now fetches ALL posts. RLS policies will handle security.
+      // This query now fetches ALL posts and joins the author's username.
+      // RLS policies on the database will ensure this is a safe operation.
       const { data, error } = await supabase
         .from('posts')
-        .select('id, title, category, status, user_id') // Fetch only necessary data for the dashboard
+        .select('*, users (username)') // The key change is here
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -60,7 +64,6 @@ export default function AdminDashboard() {
   }, [router, supabase, toast]);
 
   const handleDelete = async (id: string, authorId: string) => {
-    // Client-side check for non-super-admins
     if (user?.role === 'author' && user.id !== authorId) {
         toast({ title: "Permission Denied", description: "You can only delete your own posts.", variant: "destructive" });
         return;
@@ -131,12 +134,12 @@ export default function AdminDashboard() {
             {pendingPosts.map(post => (
               <Card key={post.id} className="bg-[#1A1A1A] border-red-400/50 mb-4">
                 <CardHeader className="flex flex-row justify-between items-center p-4">
-                  <p className="font-semibold text-white">{post.title}</p>
+                  <div>
+                    <p className="font-semibold text-white">{post.title}</p>
+                    <p className="text-sm text-gray-400">By: {post.users?.username || 'Unknown'}</p>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <Link href={`/admin/edit/${post.id}`}><Button size="sm" variant="outline">Review & Edit</Button></Link>
-                    <Button onClick={() => handleApproval(post.id)} size="sm" className="bg-green-500 hover:bg-green-600">
-                      <CheckCircle className="w-4 h-4 mr-2" />Approve
-                    </Button>
+                    <Link href={`/posts/preview/${post.id}`}><Button size="sm" variant="outline">Review & Approve</Button></Link>
                   </div>
                 </CardHeader>
               </Card>
@@ -156,8 +159,9 @@ export default function AdminDashboard() {
               <Card key={post.id} className="bg-[#1A1A1A] border-[#333]">
                 <CardHeader className="p-4">
                   <div className="flex justify-between items-start gap-4">
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 flex-grow">
                       <p className="font-semibold text-lg text-white">{post.title}</p>
+                      <p className="text-xs text-gray-500">Author: {post.users?.username || 'Unknown'}</p>
                         <div className="flex gap-2 items-center">
                             {getStatusBadge(post.status)}
                              {post.status === 'draft' && isOwner && (
