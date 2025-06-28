@@ -1,5 +1,3 @@
-// File: app/admin/create/page.tsx
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -10,10 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Lock } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-// --- NEW: Import the server actions ---
 import { getSession, createPost } from "@/app/actions"
 
-// Define the shape of the data needed by the action
 interface PostEditorData {
   title: string
   content: string
@@ -44,11 +40,8 @@ export default function CreatePost() {
     checkUser();
   }, [router])
 
-  // --- REWRITTEN handleSave LOGIC ---
   const handleSave = async (postData: PostEditorData) => {
     setIsSaving(true);
-    // The server action now handles success/redirect automatically.
-    // We only need to handle a potential error return.
     const result = await createPost(postData);
 
     if (result?.error) {
@@ -59,9 +52,9 @@ export default function CreatePost() {
       });
       setIsSaving(false); // Stop loading only if there's an error
     }
+    // No need to handle success, as the server action redirects automatically
   };
 
-  // --- The rest of the component's JSX remains the same ---
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA] flex items-center justify-center">
