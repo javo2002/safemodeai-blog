@@ -46,30 +46,20 @@ export default function CreatePost() {
 
   // --- REWRITTEN handleSave LOGIC ---
   const handleSave = async (postData: PostEditorData) => {
-    setIsSaving(true)
-
-    // Call the new, secure server action
+    setIsSaving(true);
+    // The server action now handles success/redirect automatically.
+    // We only need to handle a potential error return.
     const result = await createPost(postData);
 
-    setIsSaving(false)
-
-    if (result.error) {
-      console.error("Error creating post:", result.error)
+    if (result?.error) {
       toast({
         title: "Error Creating Post",
-        description: result.error || "Could not save the post.",
+        description: result.error,
         variant: "destructive",
-      })
-    } else {
-      toast({
-        title: "Post Created!",
-        description: "Your new post has been saved successfully.",
-        className: "bg-[#1A1A1A] text-[#61E8E1] border-[#61E8E1]",
-      })
-      router.push("/admin")
-      router.refresh()
+      });
+      setIsSaving(false); // Stop loading only if there's an error
     }
-  }
+  };
 
   // --- The rest of the component's JSX remains the same ---
   if (isLoading) {
