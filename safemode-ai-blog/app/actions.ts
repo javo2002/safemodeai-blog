@@ -5,6 +5,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 // --- NEW: Import the server client to query the database ---
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -92,36 +93,32 @@ export async function getSession() {
 // --- ADD THIS NEW SERVER ACTION AT THE END OF THE FILE ---
 export async function createPost(postData: any) {
   const session = await getSession();
-  
-  // 1. Check if the user is an admin
   if (!session?.user || session.user.role !== 'admin') {
     return { error: 'Access Denied. You must be an administrator.' };
   }
-
-  // 2. Use the secure server client to perform the insert
   const supabase = createSupabaseServerClient();
-
-  const { error } = await supabase
-    .from("posts")
-    .insert([
-      {
-        title: postData.title,
-        content: postData.content,
-        category: postData.category,
-        featured: postData.featured,
-        image: postData.image,
-        published: postData.published,
-        sources: postData.sources,
-      },
-    ]);
+  const { error } = await supabase.from("posts").insert([
+    {
+      title: postData.title,
+      content: postData.content,
+      category: postData.category,
+      featured: postData.featured,
+      image: postData.image,
+      published: postData.published,
+      sources: postData.sources,
+    },
+  ]);
 
   if (error) {
     console.error("Server Action Error creating post:", error);
     return { error: error.message };
   }
 
-  // On success, return a success message (or the new post data)
-  return { success: true };
+  // On success, revalidate paths and redirect
+  revalidatePath('/');
+  revalidatePath('/articles');
+  revalidatePath('/admin');
+  redirect('/admin');
 }
 
 // File: app/actions.ts
@@ -175,7 +172,6 @@ export async function updatePost(postId: string, postData: any) {
   if (!session?.user || session.user.role !== 'admin') {
     return { error: 'Access Denied.' };
   }
-
   const supabase = createSupabaseServerClient();
   const { error } = await supabase
     .from('posts')
@@ -187,7 +183,6 @@ export async function updatePost(postId: string, postData: any) {
       image: postData.image,
       published: postData.published,
       sources: postData.sources,
-      // updated_at is handled automatically by the database trigger
     })
     .eq('id', postId);
 
@@ -195,8 +190,15 @@ export async function updatePost(postId: string, postData: any) {
     console.error("Server Action Error updating post:", error);
     return { error: error.message };
   }
-  return { success: true };
+
+  // On success, revalidate paths and redirect
+  revalidatePath('/');
+  revalidatePath('/articles');
+  revalidatePath(`/posts/${postId}`);
+  revalidatePath('/admin');
+  redirect('/admin');
 }
+
 
 // --- ADD THE deletePost ACTION ---
 export async function deletePost(postId: string) {
@@ -204,16 +206,19 @@ export async function deletePost(postId: string) {
   if (!session?.user || session.user.role !== 'admin') {
     return { error: 'Access Denied.' };
   }
-
   const supabase = createSupabaseServerClient();
-  const { error } = await supabase
-    .from('posts')
-    .delete()
-    .eq('id', postId);
+  const { error } = await supabase.from('posts').delete().eq('id', postId);
   
   if (error) {
     console.error("Server Action Error deleting post:", error);
     return { error: error.message };
   }
+  
+  // On success, revalidate paths
+  revalidatePath('/');
+  revalidatePath('/articles');
+  revalidatePath('/admin');
+  
+  // Return success for the UI to update
   return { success: true };
 }
