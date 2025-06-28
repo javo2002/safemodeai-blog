@@ -188,3 +188,26 @@ export async function getAllPublishedPosts() {
   if (error) return [];
   return data;
 }
+
+// --- ADD THIS NEW SERVER ACTION AT THE END OF THE FILE ---
+export async function getPostForPreview(postId: string) {
+  const session = await getSession();
+  // Only allow logged-in users to access this function
+  if (!session?.user) {
+    return null;
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*, users (username)') // Also fetch the author's username
+    .eq('id', postId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching post for preview:", error);
+    return null;
+  }
+
+  return data;
+}
