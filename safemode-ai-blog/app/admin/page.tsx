@@ -20,7 +20,7 @@ interface Post {
   title: string;
   category: string;
   featured: boolean;
-  createdAt: string;
+  created_at: string;
   published: boolean;
 }
 
