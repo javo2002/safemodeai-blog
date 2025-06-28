@@ -55,18 +55,24 @@ export function PostEditor({ initialData, onSave, isSaving = false }: PostEditor
     if (!file) return;
 
     setIsUploading(true);
-    const uploadFormData = new FormData();
-    uploadFormData.append('file', file);
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
 
-    const result = await uploadPostImage(uploadFormData);
+      const result = await uploadPostImage(uploadFormData);
 
-    setIsUploading(false);
-
-    if (result.error) {
-      toast({ title: "Image Upload Failed", description: result.error, variant: "destructive" });
-    } else if (result.publicUrl) {
-      setFormData(prev => ({ ...prev, image: result.publicUrl as string }));
-      toast({ title: "Image Uploaded", description: "Image is ready to be saved with the post." });
+      if (result.error) {
+        toast({ title: "Image Upload Failed", description: result.error, variant: "destructive" });
+      } else if (result.publicUrl) {
+        setFormData(prev => ({ ...prev, image: result.publicUrl as string }));
+        toast({ title: "Image Uploaded", description: "Image is ready to be saved with the post." });
+      }
+    } catch (err) {
+      console.error("An unexpected error occurred during upload:", err);
+      toast({ title: "Upload Failed", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
+    } finally {
+      // This 'finally' block ensures the loading state is ALWAYS turned off.
+      setIsUploading(false);
     }
   };
   
