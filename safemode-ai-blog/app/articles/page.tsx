@@ -1,3 +1,5 @@
+// File: app/articles/page.tsx
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -5,13 +7,14 @@ import Link from "next/link"
 import Image from "next/image"
 import { LayoutGrid, CalendarDays, ArrowRight } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-// REMOVED: import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
+// --- CORRECTED: Post interface now includes the 'content' field ---
 interface Post {
   id: string
   title: string
+  content: string // Now we expect this from the API
   category: string
-  image: string // Assuming image URL is still needed from somewhere or constructed
+  image: string
   created_at: string
 }
 
@@ -19,17 +22,17 @@ interface GroupedPosts {
   [category: string]: Post[]
 }
 
+const PLACEHOLDER_SNIPPET = "Coming soon..."
+
 export default function AllArticlesPage() {
   const [groupedPosts, setGroupedPosts] = useState<GroupedPosts>({})
   const [isLoading, setIsLoading] = useState(true)
   const [categories, setCategories] = useState<string[]>([])
   const [openCategories, setOpenCategories] = useState<string[]>([])
-  // REMOVED: const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
     const fetchPostsFromApi = async () => {
       try {
-        // --- NEW: Fetch from your PHP Netlify Function ---
         const response = await fetch('/.netlify/functions/api');
         
         if (!response.ok) {
@@ -38,12 +41,10 @@ export default function AllArticlesPage() {
 
         const data: Post[] = await response.json();
 
-        // The rest of the logic remains the same
         const groups: GroupedPosts = data.reduce((acc, post) => {
           const category = post.category || "Uncategorized"
           if (!acc[category]) acc[category] = []
-          // We need to add a placeholder for image and content as they are not in the PHP response
-          acc[category].push({ ...post, image: `/placeholder.svg?height=200&width=350&query=${encodeURIComponent(post.category) || "tech"}` });
+          acc[category].push(post); // No longer need to add placeholder image
           return acc
         }, {} as GroupedPosts)
 
@@ -60,10 +61,7 @@ export default function AllArticlesPage() {
     }
 
     fetchPostsFromApi()
-  }, []) // Removed supabase from dependency array
-
-  // ... The rest of the component's JSX remains the same
-  // ... (Paste the rest of the original AllArticlesPage component here)
+  }, [])
 
   if (isLoading) {
     return (
@@ -115,7 +113,11 @@ export default function AllArticlesPage() {
                 <AccordionContent className="pt-6 pb-10">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                     {groupedPosts[category].map((post) => {
-                      const snippet = "Coming soon..."
+                      // --- CORRECTED: Generating a real snippet from post.content ---
+                      const snippet =
+                        post.content && post.content.trim() !== ""
+                          ? `${post.content.substring(0, 120)}...`
+                          : PLACEHOLDER_SNIPPET;
                       return (
                         <Link href={`/posts/${post.id}`} key={post.id} className="group">
                           <div className="bg-[#1A1A1A] rounded-lg overflow-hidden glow-border hover:glow-border-intense hover:scale-103 transition-all duration-300 h-full flex flex-col">
