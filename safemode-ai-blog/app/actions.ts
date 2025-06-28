@@ -143,3 +143,21 @@ export async function getFeaturedPosts() {
 
   return data;
 }
+
+// --- ADD THIS NEW SERVER ACTION AT THE END OF THE FILE ---
+export async function getAllPublishedPosts() {
+  const supabase = createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from('posts')
+    .select('id, title, content, category, image, created_at') // Corrected column name to created_at
+    .eq('published', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Server Action Error fetching all posts:", error);
+    return []; 
+  }
+
+  return data;
+}
