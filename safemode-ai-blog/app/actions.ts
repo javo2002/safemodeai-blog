@@ -124,21 +124,24 @@ export async function createPost(postData: any) {
   return { success: true };
 }
 
-// --- ADD THIS NEW SERVER ACTION AT THE END OF THE FILE ---
+// File: app/actions.ts
+
+// Find the existing getFeaturedPosts function and replace it with this corrected version.
+
 export async function getFeaturedPosts() {
   const supabase = createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from('posts')
-    .select('id, title, content, category, image, createdAt')
+    // --- THIS LINE IS THE FIX ---
+    .select('id, title, content, category, image, created_at') // Corrected column name
     .eq('published', true)
     .eq('featured', true)
     .order('created_at', { ascending: false });
 
   if (error) {
     console.error("Server Action Error fetching featured posts:", error);
-    // In a real app, you might want to handle this error more gracefully
-    return []; 
+    return [];
   }
 
   return data;
