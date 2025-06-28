@@ -47,10 +47,10 @@ export default function AdminDashboard() {
       setUser(session.user);
 
       // This query now fetches ALL posts and joins the author's username.
-      // RLS policies on the database will ensure this is a safe operation.
+      // The new RLS policy allows any authenticated user to view all posts.
       const { data, error } = await supabase
         .from('posts')
-        .select('*, users (username)') // The key change is here
+        .select('*, users (username)') // The key change is here to join user data
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -104,9 +104,9 @@ export default function AdminDashboard() {
   const getStatusBadge = (status: Post['status']) => {
     switch (status) {
         case 'published':
-            return <Badge className="bg-green-600 text-white">Published</Badge>;
+            return <Badge className="bg-green-600 hover:bg-green-700 text-white">Published</Badge>;
         case 'pending_approval':
-            return <Badge className="bg-yellow-500 text-black">Pending Approval</Badge>;
+            return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-black">Pending Approval</Badge>;
         case 'draft':
             return <Badge variant="secondary">Draft</Badge>;
     }
@@ -130,16 +130,18 @@ export default function AdminDashboard() {
         {/* Approval Queue for Super Admin */}
         {user.role === 'super-admin' && pendingPosts.length > 0 && (
           <div className="mb-12">
-            <h2 className="text-2xl font-bold text-red-400 font-mono mb-6">Approval Queue ({pendingPosts.length})</h2>
+            <h2 className="text-2xl font-bold text-yellow-400 font-mono mb-6">Approval Queue ({pendingPosts.length})</h2>
             {pendingPosts.map(post => (
-              <Card key={post.id} className="bg-[#1A1A1A] border-red-400/50 mb-4">
+              <Card key={post.id} className="bg-[#1A1A1A] border-yellow-400/50 mb-4">
                 <CardHeader className="flex flex-row justify-between items-center p-4">
                   <div>
                     <p className="font-semibold text-white">{post.title}</p>
                     <p className="text-sm text-gray-400">By: {post.users?.username || 'Unknown'}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Link href={`/posts/preview/${post.id}`}><Button size="sm" variant="outline">Review & Approve</Button></Link>
+                    <Link href={`/posts/preview/${post.id}`}>
+                        <Button size="sm" variant="outline">Review & Approve</Button>
+                    </Link>
                   </div>
                 </CardHeader>
               </Card>
