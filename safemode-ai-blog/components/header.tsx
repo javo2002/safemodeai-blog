@@ -26,8 +26,6 @@ export function Header({ user }: { user: UserType | null }) {
     await logout();
   }
   
-  // This is a placeholder for a secure "delete all" action.
-  // In a real app, this would be a server action with extra confirmation.
   const deleteAllPosts = () => {
     if (confirm("DANGEROUS: Are you sure you want to delete all posts? This action is for testing and cannot be undone.")) {
         toast({ title: "Action Not Implemented", description: "This is a placeholder for a secure delete-all action.", variant: "destructive" });
@@ -116,11 +114,8 @@ export function Header({ user }: { user: UserType | null }) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link href="/auth/signin">
-                <Button variant="outline" className="text-[#61E8E1] border-[#61E8E1] hover:bg-[#61E8E1] hover:text-[#0D0D0D]">
-                  Sign In
-                </Button>
-              </Link>
+              // THIS IS THE CHANGE: Return null to hide the sign-in button
+              null
             )}
           </nav>
         </div>
