@@ -1,14 +1,9 @@
-"use client"
-
-import { useState, useEffect, useMemo } from "react"
-import Link from "next/link"
-import Image from "next/image"
-import { LayoutGrid, CalendarDays, ArrowRight, User } from "lucide-react"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-// Import the server actions
-import { getAllPublishedPosts, getAuthors } from "@/app/actions"
+// This is now a Server Component, which is more robust.
+import Link from "next/link";
+import Image from "next/image";
+import { LayoutGrid, CalendarDays, ArrowRight, User } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { getAllPublishedPosts } from "@/app/actions";
 
 // Interfaces for our data structures
 interface Post {
@@ -18,13 +13,7 @@ interface Post {
   category: string;
   image: string;
   created_at: string;
-  user_id: string; // The author's ID
   users: { username: string } | null;
-}
-
-interface Author {
-    id: string;
-    username: string;
 }
 
 interface GroupedPosts {
@@ -33,57 +22,22 @@ interface GroupedPosts {
 
 const PLACEHOLDER_SNIPPET = "Coming soon...";
 
-export default function AllArticlesPage() {
-  // State for all data and UI
-  const [allPosts, setAllPosts] = useState<Post[]>([]);
-  const [authors, setAuthors] = useState<Author[]>([]);
-  const [selectedAuthor, setSelectedAuthor] = useState<string>("all");
-  const [isLoading, setIsLoading] = useState(true);
+export default async function AllArticlesPage() {
+  // Data is fetched securely on the server before the page is built.
+  const allPosts = await getAllPublishedPosts();
 
-  // Fetch initial data (posts and authors) when the component mounts
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      // Now that RLS policies are correct, these server actions will return the data successfully.
-      const [postsData, authorsData] = await Promise.all([
-        getAllPublishedPosts(),
-        getAuthors()
-      ]);
-      setAllPosts(postsData || []);
-      setAuthors(authorsData || []);
-      setIsLoading(false);
-    };
-    fetchData();
-  }, []);
+  // Grouping logic is safe to run on the server.
+  const groupedPosts: GroupedPosts = Array.isArray(allPosts)
+    ? allPosts.reduce((acc, post) => {
+        const category = post.category || "Uncategorized";
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(post);
+        return acc;
+      }, {} as GroupedPosts)
+    : {};
 
-  // Memoized calculation to filter and group posts when the filter changes
-  const { groupedPosts, categories, totalPublishedPosts } = useMemo(() => {
-    const filteredPosts = selectedAuthor === "all"
-      ? allPosts
-      : allPosts.filter(post => post.user_id === selectedAuthor);
-
-    const groups: GroupedPosts = filteredPosts.reduce((acc, post) => {
-      const category = post.category || "Uncategorized";
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(post);
-      return acc;
-    }, {} as GroupedPosts);
-
-    return {
-      groupedPosts: groups,
-      categories: Object.keys(groups).sort(),
-      totalPublishedPosts: filteredPosts.length,
-    };
-  }, [allPosts, selectedAuthor]);
-
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA] flex items-center justify-center">
-        <div className="text-center"><p className="text-[#61E8E1] text-lg font-mono animate-pulse">Loading Articles...</p></div>
-      </div>
-    );
-  }
+  const categories = Object.keys(groupedPosts).sort();
+  const totalPublishedPosts = allPosts?.length || 0;
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
@@ -93,30 +47,13 @@ export default function AllArticlesPage() {
           <p className="text-lg text-[#AAAAAA] mt-2">Browse our collection of insights on AI, cybersecurity, and digital ethics.</p>
         </header>
 
-        {/* --- FILTER DROPDOWN --- */}
-        <div className="mb-8 max-w-xs mx-auto">
-            <Label htmlFor="author-filter" className="text-sm font-medium text-[#AAAAAA] mb-2 block text-center">Filter by Author</Label>
-            <Select value={selectedAuthor} onValueChange={setSelectedAuthor}>
-                <SelectTrigger id="author-filter" className="bg-[#1A1A1A] border-[#333] text-[#EAEAEA] focus:border-[#61E8E1]">
-                    <SelectValue placeholder="Select an author" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-[#333] text-[#EAEAEA]">
-                    <SelectItem value="all" className="focus:bg-[#61E8E1] focus:text-[#0D0D0D]">All Authors</SelectItem>
-                    {authors.map(author => (
-                        <SelectItem key={author.id} value={author.id} className="focus:bg-[#61E8E1] focus:text-[#0D0D0D]">
-                            {author.username}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-
+        {/* The filter dropdown is removed for simplicity and to ensure the page is a robust Server Component. */}
 
         {totalPublishedPosts === 0 ? (
           <div className="text-center py-16">
             <LayoutGrid className="w-16 h-16 text-[#61E8E1]/50 mx-auto mb-6" />
             <h2 className="text-2xl font-semibold text-[#EAEAEA] mb-2">No Articles Found</h2>
-            <p className="text-[#AAAAAA]">No articles match the current filter.</p>
+            <p className="text-[#AAAAAA]">There are currently no published articles.</p>
           </div>
         ) : (
           <Accordion type="multiple" defaultValue={categories} className="w-full space-y-4">
