@@ -194,3 +194,18 @@ export async function getPostForPreview(postId: string) {
   if (error) return null;
   return data;
 }
+
+export async function getAuthors() {
+  const supabase = createSupabaseServerClient();
+  // Fetches all users who are designated as 'author' or 'super-admin'
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, username')
+    .in('role', ['author', 'super-admin']);
+
+  if (error) {
+    console.error("Error fetching authors:", error);
+    return [];
+  }
+  return data;
+}
