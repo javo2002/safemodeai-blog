@@ -1,6 +1,4 @@
-/* 
-  CORRECTED: Standard order for @tailwind directives.
-  Each on its own line for maximum clarity.
+/* CORRECTED: Standard order for @tailwind directives.
 */
 @tailwind base;
 @tailwind components;
@@ -24,7 +22,6 @@
   .prose h4,
   .prose h5,
   .prose h6 {
-    /* CORRECTED: Ensured space between text-[var(--tw-prose-headings)] and font-mono */
     @apply text-[var(--tw-prose-headings)] font-mono;
   }
   .prose a {
@@ -33,12 +30,20 @@
   .prose blockquote {
     @apply border-l-4 border-[var(--tw-prose-quote-borders)] pl-4 italic text-[var(--tw-prose-quotes)];
   }
-  .prose ul > li::before {
-    @apply bg-[var(--tw-prose-bullets)];
+  
+  /* --- CORRECTED LIST STYLES --- */
+  /* Remove the old, conflicting ::before rules and use standard list utilities */
+  .prose ul {
+    @apply list-disc pl-5;
   }
-  .prose ol > li::before {
-    @apply text-[var(--tw-prose-bullets)];
+  .prose ol {
+    @apply list-decimal pl-5;
   }
+  .prose li {
+    @apply my-2;
+  }
+  /* --- END OF CORRECTED LIST STYLES --- */
+  
   .prose code {
     @apply bg-[#0A0A0A] text-[#61E8E1] px-1.5 py-0.5 rounded-sm font-mono text-sm border border-[#333];
   }
