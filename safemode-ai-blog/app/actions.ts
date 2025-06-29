@@ -55,24 +55,41 @@ export async function login(formData: FormData) {
 
 
 // --- POST MANAGEMENT ---
+
 function sanitizeContent(content: string): string {
   const window = new JSDOM('').window;
   const purify = DOMPurify(window as any);
   return purify.sanitize(content);
 }
 
-function getStatusForRole(published: boolean, role: string): string {
-    if (!published) return 'draft';
+function getStatusForRole(shouldPublish: boolean, role: string): string {
+    if (!shouldPublish) return 'draft';
     return role === 'super-admin' ? 'published' : 'pending_approval';
 }
 
 export async function createPost(postData: any) {
   const session = await getSession();
   if (!session?.user) return { error: 'Access Denied.' };
+
   const supabase = createSupabaseServerClient();
   const status = getStatusForRole(postData.published, session.user.role);
-  const { error } = await supabase.from("posts").insert([{ ...postData, content: sanitizeContent(postData.content), user_id: session.user.id, status: status }]);
+
+  // CORRECTED: Explicitly build the object to insert, excluding the 'published' property.
+  const dataToInsert = {
+      title: postData.title,
+      content: sanitizeContent(postData.content),
+      category: postData.category,
+      featured: postData.featured,
+      image: postData.image,
+      sources: postData.sources,
+      user_id: session.user.id,
+      status: status,
+  };
+
+  const { error } = await supabase.from("posts").insert([dataToInsert]);
+
   if (error) return { error: error.message };
+
   revalidatePath('/admin');
   redirect('/admin');
 }
@@ -80,10 +97,28 @@ export async function createPost(postData: any) {
 export async function updatePost(postId: string, postData: any) {
   const session = await getSession();
   if (!session?.user) return { error: 'Access Denied.' };
+
   const supabase = createSupabaseServerClient();
   const status = getStatusForRole(postData.published, session.user.role);
-  const { error } = await supabase.from('posts').update({ ...postData, content: sanitizeContent(postData.content), status: status }).eq('id', postId);
+
+  // CORRECTED: Explicitly build the object to update, excluding the 'published' property.
+  const dataToUpdate = {
+      title: postData.title,
+      content: sanitizeContent(postData.content),
+      category: postData.category,
+      featured: postData.featured,
+      image: postData.image,
+      sources: postData.sources,
+      status: status,
+  };
+
+  const { error } = await supabase
+    .from('posts')
+    .update(dataToUpdate)
+    .eq('id', postId);
+
   if (error) return { error: error.message };
+
   revalidatePath('/');
   revalidatePath('/articles');
   revalidatePath(`/posts/${postId}`);
@@ -98,7 +133,7 @@ export async function approvePost(postId: string) {
     const { error } = await supabase.from('posts').update({ status: 'published' }).eq('id', postId);
     if (error) return { error: error.message };
     revalidatePath('/admin');
-    revalidatePath(`/posts/${postId}`);
+    revalidatePath(`/posts/preview/${postId}`);
     return { success: true };
 }
 
@@ -114,6 +149,8 @@ export async function deletePost(postId: string) {
   return { success: true };
 }
 
+
+// --- IMAGE UPLOAD ---
 export async function uploadPostImage(formData: FormData) {
   const session = await getSession();
   if (!session?.user) return { error: 'Access Denied.' };
@@ -130,59 +167,30 @@ export async function uploadPostImage(formData: FormData) {
 // --- PUBLIC & SECURE DATA FETCHING ---
 export async function getFeaturedPosts() {
   const supabase = createSupabaseServerClient();
-  // CORRECTED: Added join to users table
-  const { data, error } = await supabase
-    .from('posts')
-    .select('*, users (username)')
-    .eq('status', 'published')
-    .eq('featured', true)
-    .order('created_at', { ascending: false });
-
+  const { data, error } = await supabase.from('posts').select('*, users (username)').eq('status', 'published').eq('featured', true).order('created_at', { ascending: false });
   if (error) { console.error("getFeaturedPosts Error:", error); return []; }
   return data;
 }
 
 export async function getAllPublishedPosts() {
   const supabase = createSupabaseServerClient();
-  // CORRECTED: Added join to users table
-  const { data, error } = await supabase
-    .from('posts')
-    .select('*, users (username)')
-    .eq('status', 'published')
-    .order('created_at', { ascending: false });
-
+  const { data, error } = await supabase.from('posts').select('*, users (username)').eq('status', 'published').order('created_at', { ascending: false });
   if (error) { console.error("getAllPublishedPosts Error:", error); return []; }
   return data;
 }
 
 export async function getPublishedPostById(postId: string) {
     const supabase = createSupabaseServerClient();
-    // This action can be public because it's filtered by status = 'published'
-    const { data, error } = await supabase
-        .from('posts')
-        .select('*, users (username)')
-        .eq('id', postId)
-        .eq('status', 'published')
-        .single();
-
-    if (error) {
-        console.error("getPublishedPostById Error:", error);
-        return null;
-    }
+    const { data, error } = await supabase.from('posts').select('*, users (username)').eq('id', postId).eq('status', 'published').single();
+    if (error) { console.error("getPublishedPostById Error:", error); return null; }
     return data;
 }
 
 export async function getPostForPreview(postId: string) {
   const session = await getSession();
   if (!session?.user) return null;
-
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from('posts')
-    .select('*, users (username)')
-    .eq('id', postId)
-    .single();
-
+  const { data, error } = await supabase.from('posts').select('*, users (username)').eq('id', postId).single();
   if (error) return null;
   return data;
 }
