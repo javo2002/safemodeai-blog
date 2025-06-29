@@ -20,8 +20,8 @@ interface User {
 }
 
 interface ProfileData {
-  bio: string;
-  avatar_url: string;
+  bio: string | null;
+  avatar_url: string | null;
 }
 
 export default function AdminProfilePage() {
@@ -38,7 +38,6 @@ export default function AdminProfilePage() {
       const session = await getSession();
       if (!session?.user) {
         router.push("/auth/signin");
-        // No need to set loading to false here, as the redirect will happen.
         return; 
       }
       setUser(session.user);
@@ -47,9 +46,8 @@ export default function AdminProfilePage() {
       if (userProfile) {
         setProfile(userProfile);
       }
-
-      // --- THIS IS THE FIX ---
-      // This line is now guaranteed to run after all fetches are complete.
+      
+      // This is now guaranteed to run after all async operations are complete.
       setIsLoading(false);
     };
     loadInitialData();
@@ -78,7 +76,12 @@ export default function AdminProfilePage() {
 
   const handleSaveProfile = async () => {
     setIsSaving(true);
-    const result = await updateUserProfile(profile);
+    // Ensure we don't send null values if the fields are empty
+    const profileToSave = {
+        bio: profile.bio || '',
+        avatar_url: profile.avatar_url || ''
+    };
+    const result = await updateUserProfile(profileToSave);
     if (result.error) {
       toast({ title: "Error", description: result.error, variant: "destructive" });
     } else {
@@ -87,7 +90,6 @@ export default function AdminProfilePage() {
     setIsSaving(false);
   };
 
-  // While checking the session, show a loading indicator.
   if (isLoading) {
     return (
         <div className="min-h-screen bg-[#0D0D0D] flex justify-center items-center">
@@ -96,23 +98,13 @@ export default function AdminProfilePage() {
     );
   }
 
-  // If loading is finished and there's still no user, it's a true access denied.
-  if (!user) {
-     return (
-        <div className="min-h-screen bg-[#0D0D0D] flex justify-center items-center">
-            <p>Redirecting to sign-in...</p>
-        </div>
-     );
-  }
-
-  // If loading is complete and the user is valid, render the editor.
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-[#61E8E1] font-mono mb-8">Profile Settings</h1>
         <Card className="bg-[#1A1A1A] border-[#333] glow-border max-w-2xl mx-auto">
           <CardHeader>
-            <CardTitle className="text-[#61E8E1] font-mono">Edit Your Profile ({user.username})</CardTitle>
+            <CardTitle className="text-[#61E8E1] font-mono">Edit Your Profile ({user?.username})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col items-center space-y-4">
