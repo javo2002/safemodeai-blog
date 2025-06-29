@@ -1,100 +1,32 @@
-"use client"
+import { redirect } from "next/navigation";
+import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Link as LinkIcon, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { getPublishedPostById } from "@/app/actions";
+import Link from "next/link";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Link as LinkIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+export default async function PostPage({ params }: { params: { id: string } }) {
+  const post = await getPublishedPostById(params.id);
 
-// This interface should match the data structure including the joined user data
-interface Post {
-  id: string
-  title: string
-  content: string
-  category: string
-  image: string
-  created_at: string
-  sources?: string[]
-  users: {
-    username: string;
-  } | null;
-}
-
-export default function PostPage({ params }: { params: { id: string } }) {
-  const router = useRouter()
-  const [post, setPost] = useState<Post | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const supabase = createSupabaseBrowserClient()
-
-  useEffect(() => {
-    const fetchPost = async () => {
-      if (params.id) {
-        // Fetch the post and join the author's username from the 'users' table
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*, users (username)')
-          .eq('id', params.id)
-          .eq('status', 'published') // Ensure only published posts can be viewed
-          .single();
-        
-        if (error || !data) {
-          console.error("Error fetching post or post not found/published:", error);
-          // Redirect to home if post isn't found or accessible
-          router.push('/');
-        } else {
-          setPost(data);
-        }
-      }
-      setIsLoading(false)
-    }
-    fetchPost()
-  }, [params.id, supabase, router])
+  if (!post) {
+    return redirect("/");
+  }
 
   const isURL = (str: string) => {
     try { new URL(str); return true; } catch (_) { return false; }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-[#61E8E1] text-lg font-mono animate-pulse">Loading Post...</div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!post) {
-    // This state is briefly visible before the redirect happens.
-    return (
-      <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
-        <main className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-3xl font-bold text-[#61E8E1] font-mono mb-4">Post Not Found</h1>
-          <p className="text-[#AAAAAA] mb-8">The post you are looking for does not exist or is not available.</p>
-          <Button onClick={() => router.push("/")} className="bg-[#61E8E1] text-[#0D0D0D] hover:bg-[#4DD4D4]">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Button>
-        </main>
-      </div>
-    )
   }
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
       <main className="container mx-auto px-4 py-8 md:py-12">
         <div className="max-w-3xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="mb-6 md:mb-8 text-[#61E8E1] hover:text-[#4DD4D4] hover:bg-transparent px-0 flex items-center group"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" />
-            <span className="font-semibold">Back to Articles</span>
-          </Button>
+          <Link href="/articles">
+            <Button variant="ghost" className="mb-6 md:mb-8 text-[#61E8E1] hover:text-[#4DD4D4] hover:bg-transparent px-0 flex items-center group">
+              <ArrowLeft className="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" />
+              <span className="font-semibold">Back to Articles</span>
+            </Button>
+          </Link>
 
           <article>
             <header className="mb-8">
@@ -105,27 +37,16 @@ export default function PostPage({ params }: { params: { id: string } }) {
                 <Badge variant="outline" className="border-[#61E8E1] text-[#61E8E1] text-sm font-mono px-3 py-1">
                   {post.category}
                 </Badge>
-                <div className="text-sm text-[#AAAAAA]">
-                  <span>By: {post.users?.username || 'SafemodeAI'}</span> | <span>
-                  {new Date(post.created_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                  </span>
+                <div className="text-sm text-[#AAAAAA] flex items-center gap-4">
+                    <div className="flex items-center gap-1.5"><User className="w-4 h-4"/>{post.users?.username || 'SafemodeAI'}</div>
+                    <span>{new Date(post.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
                 </div>
               </div>
             </header>
 
             {post.image && (
               <div className="relative w-full aspect-[16/9] mb-8 md:mb-10 rounded-lg overflow-hidden glow-border">
-                <Image
-                  src={post.image}
-                  alt={post.title}
-                  fill
-                  className="object-cover"
-                  priority
-                />
+                <Image src={post.image} alt={post.title} fill className="object-cover" priority/>
               </div>
             )}
 
@@ -142,18 +63,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
                   {post.sources.map((source, index) => (
                     <li key={index} className="text-sm text-[#AAAAAA] flex items-start">
                       <LinkIcon className="w-4 h-4 mr-2 mt-1 text-[#61E8E1] flex-shrink-0" />
-                      {isURL(source) ? (
-                        <a
-                          href={source}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-[#61E8E1] hover:underline break-all"
-                        >
-                          {source}
-                        </a>
-                      ) : (
-                        <span>{source}</span>
-                      )}
+                      {isURL(source) ? ( <a href={source} target="_blank" rel="noopener noreferrer" className="hover:text-[#61E8E1] hover:underline break-all">{source}</a>) : (<span>{source}</span>)}
                     </li>
                   ))}
                 </ul>
