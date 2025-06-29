@@ -44,6 +44,7 @@ export default function AllArticlesPage() {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
+      // Now that RLS policies are correct, these server actions will return the data successfully.
       const [postsData, authorsData] = await Promise.all([
         getAllPublishedPosts(),
         getAuthors()
