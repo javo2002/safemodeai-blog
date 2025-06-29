@@ -67,9 +67,11 @@ function sanitizeContent(content: string): string {
   return cleanContent;
 }
 
-function getStatusForRole(published: boolean, role: string): string {
-    if (!published) return 'draft';
-    return role === 'super-admin' ? 'published' : 'pending_approval';
+function getStatusForRole(shouldPublish: boolean, role: string): string {
+    // This new logic ignores the user's role.
+    // If the "Publish" button is clicked, the status is 'published'.
+    // Otherwise, it's 'draft'.
+    return shouldPublish ? 'published' : 'draft';
 }
 
 export async function createPost(postData: any) {
