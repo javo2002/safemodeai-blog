@@ -5,11 +5,11 @@ import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import YouTube from '@tiptap/extension-youtube'
 import Link from '@tiptap/extension-link'
-import { useCallback } from 'react'
+// --- THIS LINE IS THE FIX ---
+import { useCallback, useEffect } from 'react' // Added useEffect
 import { Bold, Italic, Strikethrough, Code, List, ListOrdered, Quote, Youtube, ImageIcon, Link as LinkIcon, Minus } from 'lucide-react'
 import { Button } from './ui/button'
 
-// Define a type for the toolbar button props for clarity
 type ToolbarButtonProps = {
   onClick: () => void;
   disabled?: boolean;
@@ -29,7 +29,6 @@ const ToolbarButton = ({ onClick, disabled, isActive, children }: ToolbarButtonP
         {children}
     </Button>
 );
-
 
 const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) {
@@ -61,7 +60,6 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
     }
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
   }, [editor])
-
 
   return (
     <div className="border border-b-0 border-input bg-transparent rounded-t-md p-1 flex flex-wrap gap-1">
@@ -96,7 +94,6 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   )
 }
 
-
 export function RichTextEditor({ content, onUpdate, disabled = false }: { content: string; onUpdate: (content: string) => void; disabled?: boolean; }) {
   const editor = useEditor({
     extensions: [
@@ -104,23 +101,12 @@ export function RichTextEditor({ content, onUpdate, disabled = false }: { conten
         bulletList: { keepMarks: true, keepAttributes: false },
         orderedList: { keepMarks: true, keepAttributes: false },
       }),
-      Image.configure({
-        inline: true,
-        allowBase64: true,
-      }),
-      YouTube.configure({
-        controls: false,
-        nocookie: true,
-      }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-      }),
+      Image.configure({ inline: true, allowBase64: true }),
+      YouTube.configure({ controls: false, nocookie: true }),
+      Link.configure({ openOnClick: false, autolink: true }),
     ],
     content: content,
-    onUpdate: ({ editor }) => {
-      onUpdate(editor.getHTML());
-    },
+    onUpdate: ({ editor }) => { onUpdate(editor.getHTML()); },
     editable: !disabled,
     editorProps: {
       attributes: {
@@ -142,4 +128,3 @@ export function RichTextEditor({ content, onUpdate, disabled = false }: { conten
     </div>
   );
 }
-
