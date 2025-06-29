@@ -20,9 +20,7 @@ async function decrypt(input: string): Promise<any> {
   try {
     const { payload } = await jwtVerify(input, key, { algorithms: ['HS256'] });
     return payload;
-  } catch (error) {
-    return null;
-  }
+  } catch (error) { return null; }
 }
 
 export async function getSession() {
@@ -40,57 +38,36 @@ export async function login(formData: FormData) {
   const username = formData.get('username')?.toString();
   const password = formData.get('password')?.toString();
   if (!username || !password) return { error: 'Username and password are required.' };
-
   const supabase = createSupabaseServerClient();
   const { data: user } = await supabase.from('users').select('id, username, role, password_hash').eq('username', username).single();
   if (!user || password !== user.password_hash) return { error: 'Invalid username or password.' };
-
   const sessionUser = { id: user.id, username: user.username, role: user.role };
   const expires = new Date(Date.now() + 8 * 60 * 60 * 1000);
   const session = await encrypt({ user: sessionUser, expires });
-
   cookies().set('session', session, { expires, httpOnly: true });
   redirect('/admin');
 }
 
-
 // --- POST MANAGEMENT ---
-
 function sanitizeContent(content: string): string {
   const window = new JSDOM('').window;
   const purify = DOMPurify(window as any);
   return purify.sanitize(content);
 }
 
-function getStatusForRole(shouldPublish: boolean, role: string): string {
-    if (!shouldPublish) return 'draft';
+function getStatusForRole(published: boolean, role: string): string {
+    if (!published) return 'draft';
     return role === 'super-admin' ? 'published' : 'pending_approval';
 }
 
 export async function createPost(postData: any) {
   const session = await getSession();
   if (!session?.user) return { error: 'Access Denied.' };
-
   const supabase = createSupabaseServerClient();
-  // --- THIS IS THE FIX ---
-  // The status is now correctly determined based on the user's role and their action.
   const status = getStatusForRole(postData.published, session.user.role);
-
-  const dataToInsert = {
-      title: postData.title,
-      content: sanitizeContent(postData.content),
-      category: postData.category,
-      featured: postData.featured,
-      image: postData.image,
-      sources: postData.sources,
-      user_id: session.user.id,
-      status: status,
-  };
-
+  const dataToInsert = { title: postData.title, content: sanitizeContent(postData.content), category: postData.category, featured: postData.featured, image: postData.image, sources: postData.sources, user_id: session.user.id, status: status };
   const { error } = await supabase.from("posts").insert([dataToInsert]);
-
   if (error) return { error: error.message };
-
   revalidatePath('/admin');
   redirect('/admin');
 }
@@ -98,27 +75,11 @@ export async function createPost(postData: any) {
 export async function updatePost(postId: string, postData: any) {
   const session = await getSession();
   if (!session?.user) return { error: 'Access Denied.' };
-
   const supabase = createSupabaseServerClient();
   const status = getStatusForRole(postData.published, session.user.role);
-
-  const dataToUpdate = {
-      title: postData.title,
-      content: sanitizeContent(postData.content),
-      category: postData.category,
-      featured: postData.featured,
-      image: postData.image,
-      sources: postData.sources,
-      status: status,
-  };
-
-  const { error } = await supabase
-    .from('posts')
-    .update(dataToUpdate)
-    .eq('id', postId);
-
+  const dataToUpdate = { title: postData.title, content: sanitizeContent(postData.content), category: postData.category, featured: postData.featured, image: postData.image, sources: postData.sources, status: status };
+  const { error } = await supabase.from('posts').update(dataToUpdate).eq('id', postId);
   if (error) return { error: error.message };
-
   revalidatePath('/');
   revalidatePath('/articles');
   revalidatePath(`/posts/${postId}`);
@@ -134,7 +95,6 @@ export async function approvePost(postId: string) {
     if (error) return { error: error.message };
     revalidatePath('/admin');
     revalidatePath(`/posts/preview/${postId}`);
-    revalidatePath(`/posts/${postId}`);
     return { success: true };
 }
 
@@ -164,25 +124,25 @@ export async function uploadPostImage(formData: FormData) {
   return { publicUrl };
 }
 
-// --- PUBLIC & SECURE DATA FETCHING ---
+// --- DATA FETCHING ---
 export async function getFeaturedPosts() {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase.from('posts').select('*, users (username)').eq('status', 'published').eq('featured', true).order('created_at', { ascending: false });
-  if (error) { console.error("getFeaturedPosts Error:", error); return []; }
+  if (error) return [];
   return data;
 }
 
 export async function getAllPublishedPosts() {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase.from('posts').select('*, users (username)').eq('status', 'published').order('created_at', { ascending: false });
-  if (error) { console.error("getAllPublishedPosts Error:", error); return []; }
+  if (error) return [];
   return data;
 }
 
 export async function getPublishedPostById(postId: string) {
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase.from('posts').select('*, users (username)').eq('id', postId).eq('status', 'published').single();
-    if (error) { console.error("getPublishedPostById Error:", error); return null; }
+    if (error) return null;
     return data;
 }
 
@@ -195,17 +155,58 @@ export async function getPostForPreview(postId: string) {
   return data;
 }
 
-export async function getAuthors() {
-  const supabase = createSupabaseServerClient();
-  // Fetches all users who are designated as 'author' or 'super-admin'
-  const { data, error } = await supabase
-    .from('users')
-    .select('id, username')
-    .in('role', ['author', 'super-admin']);
+// --- NEW PROFILE & AUTHOR ACTIONS ---
 
-  if (error) {
-    console.error("Error fetching authors:", error);
-    return [];
-  }
-  return data;
+export async function getAuthorProfiles() {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, username, role, bio, avatar_url')
+        .order('role', { ascending: false }); // Show super-admin first
+
+    if (error) {
+        console.error("Error fetching author profiles:", error);
+        return [];
+    }
+    return data;
+}
+
+export async function getCurrentUserProfile() {
+    const session = await getSession();
+    if (!session?.user) return null;
+    
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+        .from('users')
+        .select('bio, avatar_url')
+        .eq('id', session.user.id)
+        .single();
+
+    if (error) {
+        console.error("Error fetching current user profile:", error);
+        return null;
+    }
+    return data;
+}
+
+export async function updateUserProfile(profileData: { bio: string; avatar_url: string; }) {
+    const session = await getSession();
+    if (!session?.user) return { error: 'Access Denied.' };
+
+    const supabase = createSupabaseServerClient();
+    const { error } = await supabase
+        .from('users')
+        .update({
+            bio: profileData.bio,
+            avatar_url: profileData.avatar_url
+        })
+        .eq('id', session.user.id);
+
+    if (error) {
+        return { error: error.message };
+    }
+    
+    revalidatePath('/about');
+    revalidatePath('/admin/profile');
+    return { success: true };
 }
