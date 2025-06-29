@@ -20,11 +20,18 @@ interface UserType {
 }
 
 export function Header({ user }: { user: UserType | null }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { toast } = useToast()
 
   const handleSignOut = async () => {
     await logout();
+  }
+  
+  // This is a placeholder for a secure "delete all" action.
+  // In a real app, this would be a server action with extra confirmation.
+  const deleteAllPosts = () => {
+    if (confirm("DANGEROUS: Are you sure you want to delete all posts? This action is for testing and cannot be undone.")) {
+        toast({ title: "Action Not Implemented", description: "This is a placeholder for a secure delete-all action.", variant: "destructive" });
+    }
   }
 
   const navLinks = [
@@ -58,17 +65,23 @@ export function Header({ user }: { user: UserType | null }) {
                   <Button variant="ghost" className="text-[#EAEAEA] hover:text-[#61E8E1] hover:bg-transparent px-2">
                     <User className="w-4 h-4 mr-2" />
                     {user.username}
-                    {user.role === 'super-admin' && <ShieldCheck className="w-4 h-4 ml-2 text-yellow-400" />}
+                    {user.role === 'super-admin' && <ShieldCheck className="w-4 h-4 ml-2 text-yellow-400" title="Super Admin"/>}
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-[#1A1A1A] border-[#333]" align="end">
                   
-                  {/* Links for ALL logged-in users */}
+                  {/* --- Links for ALL logged-in users --- */}
                   <DropdownMenuItem asChild>
                     <Link href="/admin" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer">
                       <LayoutDashboard className="w-4 h-4 mr-2" />
                       Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/admin/create" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Post
                     </Link>
                   </DropdownMenuItem>
                    <DropdownMenuItem asChild>
@@ -78,8 +91,21 @@ export function Header({ user }: { user: UserType | null }) {
                     </Link>
                   </DropdownMenuItem>
                   
-                  <DropdownMenuSeparator className="bg-[#333]" />
+                  {/* --- SUPER-ADMIN ONLY Links --- */}
+                  {user.role === 'super-admin' && (
+                    <>
+                      <DropdownMenuSeparator className="bg-[#333]" />
+                       <DropdownMenuItem
+                          onClick={deleteAllPosts}
+                          className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete All Posts (DEV)
+                        </DropdownMenuItem>
+                    </>
+                  )}
                   
+                  <DropdownMenuSeparator className="bg-[#333]" />
                   <DropdownMenuItem
                     onClick={handleSignOut}
                     className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer"
@@ -89,6 +115,12 @@ export function Header({ user }: { user: UserType | null }) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            ) : (
+              <Link href="/auth/signin">
+                <Button variant="outline" className="text-[#61E8E1] border-[#61E8E1] hover:bg-[#61E8E1] hover:text-[#0D0D0D]">
+                  Sign In
+                </Button>
+              </Link>
             )}
           </nav>
         </div>
