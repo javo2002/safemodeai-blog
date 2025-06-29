@@ -89,12 +89,6 @@ export function Header({ user }: { user: UserType | null }) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              <Link href="/auth/signin">
-                <Button variant="outline" className="text-[#61E8E1] border-[#61E8E1] hover:bg-[#61E8E1] hover:text-[#0D0D0D]">
-                  Sign In
-                </Button>
-              </Link>
             )}
           </nav>
         </div>
