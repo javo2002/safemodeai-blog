@@ -35,23 +35,29 @@ export default function AdminProfilePage() {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const session = await getSession();
-      if (!session?.user) {
-        router.push("/auth/signin");
-        return; 
-      }
-      setUser(session.user);
+      try {
+        const session = await getSession();
+        if (!session?.user) {
+          router.push("/auth/signin");
+          return; 
+        }
+        setUser(session.user);
 
-      const userProfile = await getCurrentUserProfile();
-      if (userProfile) {
-        setProfile(userProfile);
+        const userProfile = await getCurrentUserProfile();
+        if (userProfile) {
+          setProfile(userProfile);
+        }
+      } catch (error) {
+        console.error("Failed to load profile data:", error);
+        toast({ title: "Error", description: "Could not load profile data.", variant: "destructive" });
+      } finally {
+        // This 'finally' block GUARANTEES that loading is set to false,
+        // even if an error occurs. This fixes the infinite loading bug.
+        setIsLoading(false);
       }
-      
-      // This is now guaranteed to run after all async operations are complete.
-      setIsLoading(false);
     };
     loadInitialData();
-  }, [router]);
+  }, [router, toast]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,7 +82,6 @@ export default function AdminProfilePage() {
 
   const handleSaveProfile = async () => {
     setIsSaving(true);
-    // Ensure we don't send null values if the fields are empty
     const profileToSave = {
         bio: profile.bio || '',
         avatar_url: profile.avatar_url || ''
@@ -90,6 +95,7 @@ export default function AdminProfilePage() {
     setIsSaving(false);
   };
 
+  // While checking the session, show a loading indicator.
   if (isLoading) {
     return (
         <div className="min-h-screen bg-[#0D0D0D] flex justify-center items-center">
@@ -97,7 +103,17 @@ export default function AdminProfilePage() {
         </div>
     );
   }
+  
+  // This check ensures we don't render the page for a moment before redirecting
+  if (!user) {
+      return (
+        <div className="min-h-screen bg-[#0D0D0D] flex justify-center items-center">
+            <p className="text-[#AAAAAA]">Redirecting to sign-in...</p>
+        </div>
+      );
+  }
 
+  // If loading is complete and the user is valid, render the editor.
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-[#EAEAEA]">
       <main className="container mx-auto px-4 py-8">
