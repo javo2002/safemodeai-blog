@@ -72,9 +72,10 @@ export async function createPost(postData: any) {
   if (!session?.user) return { error: 'Access Denied.' };
 
   const supabase = createSupabaseServerClient();
+  // --- THIS IS THE FIX ---
+  // The status is now correctly determined based on the user's role and their action.
   const status = getStatusForRole(postData.published, session.user.role);
 
-  // CORRECTED: Explicitly build the object to insert, excluding the 'published' property.
   const dataToInsert = {
       title: postData.title,
       content: sanitizeContent(postData.content),
@@ -101,7 +102,6 @@ export async function updatePost(postId: string, postData: any) {
   const supabase = createSupabaseServerClient();
   const status = getStatusForRole(postData.published, session.user.role);
 
-  // CORRECTED: Explicitly build the object to update, excluding the 'published' property.
   const dataToUpdate = {
       title: postData.title,
       content: sanitizeContent(postData.content),
@@ -134,6 +134,7 @@ export async function approvePost(postId: string) {
     if (error) return { error: error.message };
     revalidatePath('/admin');
     revalidatePath(`/posts/preview/${postId}`);
+    revalidatePath(`/posts/${postId}`);
     return { success: true };
 }
 
@@ -148,7 +149,6 @@ export async function deletePost(postId: string) {
   revalidatePath('/admin');
   return { success: true };
 }
-
 
 // --- IMAGE UPLOAD ---
 export async function uploadPostImage(formData: FormData) {
