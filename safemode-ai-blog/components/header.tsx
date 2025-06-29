@@ -20,6 +20,7 @@ interface UserType {
 }
 
 export function Header({ user }: { user: UserType | null }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { toast } = useToast()
 
   const handleSignOut = async () => {
@@ -46,6 +47,7 @@ export function Header({ user }: { user: UserType | null }) {
             <div className="text-2xl font-bold text-[#61E8E1] font-mono glow-text">SafemodeAI</div>
           </Link>
 
+          {/* --- Desktop Navigation --- */}
           <nav className="hidden md:flex items-center space-x-6">
             {navLinks.map(link => (
               <Link key={link.href} href={link.href} className="text-[#EAEAEA] hover:text-[#61E8E1] transition-colors text-sm font-medium">
@@ -68,58 +70,52 @@ export function Header({ user }: { user: UserType | null }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-[#1A1A1A] border-[#333]" align="end">
-                  
-                  {/* --- Links for ALL logged-in users --- */}
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer">
-                      <LayoutDashboard className="w-4 h-4 mr-2" />
-                      Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/create" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Post
-                    </Link>
-                  </DropdownMenuItem>
-                   <DropdownMenuItem asChild>
-                    <Link href="/admin/profile" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer">
-                      <Settings className="w-4 h-4 mr-2" />
-                      Profile Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  
-                  {/* --- SUPER-ADMIN ONLY Links --- */}
-                  {user.role === 'super-admin' && (
-                    <>
-                      <DropdownMenuSeparator className="bg-[#333]" />
-                       <DropdownMenuItem
-                          onClick={deleteAllPosts}
-                          className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete All Posts (DEV)
-                        </DropdownMenuItem>
-                    </>
-                  )}
-                  
+                  <DropdownMenuItem asChild><Link href="/admin" className="flex items-center text-[#EAEAEA] cursor-pointer"><LayoutDashboard className="w-4 h-4 mr-2" />Dashboard</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild><Link href="/admin/create" className="flex items-center text-[#EAEAEA] cursor-pointer"><Plus className="w-4 h-4 mr-2" />Create Post</Link></DropdownMenuItem>
+                   <DropdownMenuItem asChild><Link href="/admin/profile" className="flex items-center text-[#EAEAEA] cursor-pointer"><Settings className="w-4 h-4 mr-2" />Profile Settings</Link></DropdownMenuItem>
+                  {user.role === 'super-admin' && (<><DropdownMenuSeparator className="bg-[#333]" /><DropdownMenuItem onClick={deleteAllPosts} className="flex items-center text-red-400 cursor-pointer"><Trash2 className="w-4 h-4 mr-2" />Delete All Posts (DEV)</DropdownMenuItem></>)}
                   <DropdownMenuSeparator className="bg-[#333]" />
-                  <DropdownMenuItem
-                    onClick={handleSignOut}
-                    className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut} className="flex items-center text-red-400 cursor-pointer"><LogOut className="w-4 h-4 mr-2" />Sign Out</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              // THIS IS THE CHANGE: Return null to hide the sign-in button
-              null
-            )}
+            ) : null}
           </nav>
+
+          {/* --- Mobile Menu Button --- */}
+          <div className="md:hidden">
+              <Button onClick={() => setIsMenuOpen(!isMenuOpen)} variant="ghost" size="icon">
+                  {isMenuOpen ? <X className="h-6 w-6 text-[#61E8E1]" /> : <Menu className="h-6 w-6 text-[#61E8E1]" />}
+              </Button>
+          </div>
         </div>
       </div>
+      
+      {/* --- Mobile Menu --- */}
+      {isMenuOpen && (
+          <div className="md:hidden">
+              <nav className="flex flex-col items-center space-y-6 py-8">
+                  {navLinks.map(link => (
+                    <Link key={link.href} href={link.href} className="text-lg text-[#EAEAEA] hover:text-[#61E8E1]" onClick={() => setIsMenuOpen(false)}>
+                      {link.label}
+                    </Link>
+                  ))}
+                   <a href="https://youtube.com/@safemodeai" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-2 text-lg text-[#EAEAEA] hover:text-[#61E8E1]">
+                    <Youtube className="w-5 h-5" />
+                    <span>YouTube</span>
+                  </a>
+                  {/* We show the user menu items directly in the mobile menu if logged in */}
+                  {user && (
+                      <>
+                        <div className="w-1/2 border-t border-[#333] my-4"></div>
+                        <Link href="/admin" className="text-lg text-[#EAEAEA] hover:text-[#61E8E1]" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
+                        <Link href="/admin/create" className="text-lg text-[#EAEAEA] hover:text-[#61E8E1]" onClick={() => setIsMenuOpen(false)}>Create Post</Link>
+                        <Link href="/admin/profile" className="text-lg text-[#EAEAEA] hover:text-[#61E8E1]" onClick={() => setIsMenuOpen(false)}>Profile Settings</Link>
+                        <Button onClick={handleSignOut} variant="outline" className="text-red-400 border-red-400">Sign Out</Button>
+                      </>
+                  )}
+              </nav>
+          </div>
+      )}
     </header>
   )
 }
