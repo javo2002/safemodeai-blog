@@ -11,31 +11,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useRouter } from "next/navigation"
-import { logout } from "@/app/actions"
 import { useToast } from "@/hooks/use-toast"
+import { logout } from "@/app/actions"
 
 interface UserType {
-  username: string
-  role: "super-admin" | "author"
+  username: string;
+  role: "super-admin" | "author";
 }
 
 export function Header({ user }: { user: UserType | null }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const router = useRouter()
   const { toast } = useToast()
 
   const handleSignOut = async () => {
     await logout();
-    // Redirect is handled by the server action
-  }
-  
-  // This is a placeholder for a more secure "delete all" server action.
-  const deleteAllPosts = () => {
-    if (confirm("DANGEROUS: Are you sure you want to delete all posts? This cannot be undone.")) {
-        // In a real app, this should be a secure server action.
-        toast({ title: "Action Not Implemented", description: "This is a placeholder for a secure delete-all action.", variant: "destructive" });
-    }
   }
 
   const navLinks = [
@@ -52,7 +41,6 @@ export function Header({ user }: { user: UserType | null }) {
             <div className="text-2xl font-bold text-[#61E8E1] font-mono glow-text">SafemodeAI</div>
           </Link>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             {navLinks.map(link => (
               <Link key={link.href} href={link.href} className="text-[#EAEAEA] hover:text-[#61E8E1] transition-colors text-sm font-medium">
@@ -83,37 +71,18 @@ export function Header({ user }: { user: UserType | null }) {
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/admin/create" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Post
+                   <DropdownMenuItem asChild>
+                    <Link href="/admin/profile" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer">
+                      <Settings className="w-4 h-4 mr-2" />
+                      Profile Settings
                     </Link>
                   </DropdownMenuItem>
                   
-                  {/* SUPER-ADMIN ONLY Links */}
-                  {user.role === 'super-admin' && (
-                    <>
-                      <DropdownMenuSeparator className="bg-[#333]" />
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin/profile" className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer">
-                          <Settings className="w-4 h-4 mr-2" />
-                          Profile Settings
-                        </Link>
-                      </DropdownMenuItem>
-                       <DropdownMenuItem
-                          onClick={deleteAllPosts}
-                          className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete All Posts
-                        </DropdownMenuItem>
-                    </>
-                  )}
-                  
                   <DropdownMenuSeparator className="bg-[#333]" />
+                  
                   <DropdownMenuItem
                     onClick={handleSignOut}
-                    className="flex items-center text-[#EAEAEA] hover:text-[#61E8E1] focus:text-[#61E8E1] cursor-pointer"
+                    className="flex items-center text-red-400 hover:text-red-300 focus:text-red-300 cursor-pointer"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
@@ -128,7 +97,6 @@ export function Header({ user }: { user: UserType | null }) {
               </Link>
             )}
           </nav>
-          {/* Mobile menu button can be added here if needed */}
         </div>
       </div>
     </header>
