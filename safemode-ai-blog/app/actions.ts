@@ -40,24 +40,31 @@ export async function login(formData: FormData) {
   const username = formData.get('username')?.toString();
   const password = formData.get('password')?.toString();
   if (!username || !password) return { error: 'Username and password are required.' };
-
   const supabase = createSupabaseServerClient();
   const { data: user } = await supabase.from('users').select('id, username, role, password_hash').eq('username', username).single();
   if (!user || password !== user.password_hash) return { error: 'Invalid username or password.' };
-
   const sessionUser = { id: user.id, username: user.username, role: user.role };
   const expires = new Date(Date.now() + 8 * 60 * 60 * 1000);
   const session = await encrypt({ user: sessionUser, expires });
-
   cookies().set('session', session, { expires, httpOnly: true });
   redirect('/admin');
 }
 
 // --- POST MANAGEMENT ---
+
 function sanitizeContent(content: string): string {
   const window = new JSDOM('').window;
   const purify = DOMPurify(window as any);
-  return purify.sanitize(content);
+  
+  // --- THIS IS THE FIX ---
+  // We are configuring DOMPurify to allow iframe tags and specific attributes
+  // needed for YouTube embeds.
+  const cleanContent = purify.sanitize(content, {
+    ADD_TAGS: ["iframe"],
+    ADD_ATTR: ["allow", "allowfullscreen", "frameborder", "scrolling"],
+  });
+  
+  return cleanContent;
 }
 
 function getStatusForRole(published: boolean, role: string): string {
@@ -142,26 +149,11 @@ export async function updateUserProfile(profileData: { bio: string; avatar_url: 
 }
 
 
-// --- DATA FETCHING (More Robust Versions) ---
+// --- DATA FETCHING ---
 export async function getAuthorProfiles() {
-    console.log("Attempting to fetch author profiles...");
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase.from('users').select('id, username, role, bio, avatar_url').order('role', { ascending: false });
-    if (error) {
-        console.error("CRITICAL ERROR in getAuthorProfiles:", error);
-        return []; // Return empty array on failure
-    }
-    console.log(`Successfully fetched ${data.length} author profiles.`);
-    return data;
-}
-
-export async function getAuthors() {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase.from('users').select('id, username').in('role', ['author', 'super-admin']);
-    if (error) {
-        console.error("CRITICAL ERROR in getAuthors:", error);
-        return [];
-    }
+    if (error) { console.error("Error fetching author profiles:", error); return []; }
     return data;
 }
 
@@ -194,4 +186,3 @@ export async function getPostForPreview(postId: string) {
   if (error) return null;
   return data;
 }
-
